@@ -2,15 +2,19 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BuildingIcon, MessageSquareIcon } from "lucide-react";
-
-const links = [
-  { href: "/dashboard", label: "Company", icon: BuildingIcon },
-  { href: "/workspace", label: "Workspace", icon: MessageSquareIcon },
-];
+import { BuildingIcon, MessageSquareIcon, LightbulbIcon } from "lucide-react";
+import { useT } from "@/lib/i18n/context";
 
 export default function NavLinks() {
   const pathname = usePathname();
+  const { t } = useT();
+
+  const links = [
+    { href: "/dashboard", label: t.nav.company, icon: BuildingIcon },
+    { href: "/workspace", label: t.nav.workspace, icon: MessageSquareIcon },
+    { href: "/onboard", label: t.nav.vision, icon: LightbulbIcon },
+  ];
+
   return (
     <nav className="flex items-center gap-1">
       {links.map(({ href, label, icon: Icon }) => {

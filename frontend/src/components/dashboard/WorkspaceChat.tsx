@@ -13,61 +13,76 @@ import {
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useApiKey } from "@/lib/useApiKey";
-import { INITIAL_AGENTS, INITIAL_DEPARTMENTS } from "@/lib/mock-data";
+import { useCompanyData } from "@/lib/useCompanyData";
 import type { Agent } from "@/lib/types";
+import { useT } from "@/lib/i18n/context";
+import { useAgentStatus } from "@/lib/agentStatus/context";
+import { StatusBadge } from "@/components/ui/status-badge";
+import { toast } from "sonner";
+import { useTier } from "@/lib/useTier";
+import { streamLocalChat } from "@/lib/localChat";
 
 type Message = {
   role: "user" | "assistant";
   content: string;
 };
 
-function deptName(deptId: string) {
-  return INITIAL_DEPARTMENTS.find((d) => d.id === deptId)?.name ?? "";
-}
+import type { Department } from "@/lib/types";
 
 function AgentList({
   groupedAgents,
   selectedAgentId,
   onSelect,
+  statusMap,
+  lang,
+  getDeptName,
 }: {
-  groupedAgents: { dept: (typeof INITIAL_DEPARTMENTS)[0]; agents: Agent[] }[];
+  groupedAgents: { dept: Department; agents: Agent[] }[];
   selectedAgentId: string;
   onSelect: (id: string) => void;
+  statusMap: import("@/lib/agentStatus/types").AgentStatusMap;
+  lang: "en" | "ko";
+  getDeptName: (id: string) => string;
 }) {
   return (
     <ul className="flex-1 overflow-y-auto py-2">
-      {groupedAgents.map(({ dept, agents }) => (
+      {groupedAgents.map(({ dept, agents: deptAgents }) => (
         <li key={dept.id}>
           <p className="px-4 py-1.5 text-xs text-muted-foreground font-medium uppercase tracking-wide">
             {dept.name}
           </p>
-          {agents.map((agent) => (
-            <button
-              key={agent.id}
-              onClick={() => onSelect(agent.id)}
-              className={`w-full text-left flex items-center gap-2.5 px-4 py-2.5 text-sm transition-colors hover:bg-muted ${
-                selectedAgentId === agent.id
-                  ? "bg-primary/10 text-primary font-medium"
-                  : "text-muted-foreground"
-              }`}
-            >
-              <span
-                className={`flex size-7 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
+          {deptAgents.map((agent) => {
+            const entry = statusMap[agent.id];
+            const status = entry?.status ?? "idle";
+            return (
+              <button
+                key={agent.id}
+                onClick={() => onSelect(agent.id)}
+                className={`w-full text-left flex items-center gap-2.5 px-4 py-2.5 text-sm transition-colors hover:bg-muted ${
                   selectedAgentId === agent.id
-                    ? "bg-primary text-primary-foreground"
-                    : "bg-muted text-muted-foreground"
+                    ? "bg-primary/10 text-primary font-medium"
+                    : "text-muted-foreground"
                 }`}
               >
-                {agent.name.slice(0, 2).toUpperCase()}
-              </span>
-              <div className="min-w-0">
-                <p className="truncate">{agent.name}</p>
-                <p className="text-xs text-muted-foreground truncate">
-                  {deptName(agent.departmentId)}
-                </p>
-              </div>
-            </button>
-          ))}
+                <span
+                  className={`flex size-7 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
+                    selectedAgentId === agent.id
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-muted text-muted-foreground"
+                  }`}
+                >
+                  {agent.name.slice(0, 2).toUpperCase()}
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate">{agent.name}</p>
+                  <p className="text-xs text-muted-foreground truncate">
+                    {getDeptName(agent.departmentId)}
+                  </p>
+                </div>
+                <StatusBadge status={status} lang={lang} showLabel={false} />
+              </button>
+            );
+          })}
         </li>
       ))}
     </ul>
@@ -77,6 +92,12 @@ function AgentList({
 export default function WorkspaceChat() {
   const searchParams = useSearchParams();
   const { apiKey } = useApiKey();
+  const { t, lang } = useT();
+  const { statusMap, setAgentStatus } = useAgentStatus();
+  const { tier, localEndpoint, localModel } = useTier();
+  const { departments, agents } = useCompanyData();
+
+  const isReady = (tier === "byok" && !!apiKey) || tier === "local";
 
   const initialAgentId = searchParams.get("agent") ?? "";
   const [selectedAgentId, setSelectedAgentId] = useState(initialAgentId);
@@ -87,12 +108,16 @@ export default function WorkspaceChat() {
   const bottomRef = useRef<HTMLDivElement>(null);
 
   const selectedAgent: Agent | null =
-    INITIAL_AGENTS.find((a) => a.id === selectedAgentId) ?? null;
+    agents.find((a) => a.id === selectedAgentId) ?? null;
 
-  const groupedAgents = INITIAL_DEPARTMENTS.map((dept) => ({
+  const groupedAgents = departments.map((dept) => ({
     dept,
-    agents: INITIAL_AGENTS.filter((a) => a.departmentId === dept.id),
+    agents: agents.filter((a) => a.departmentId === dept.id),
   }));
+
+  function deptName(deptId: string) {
+    return departments.find((d) => d.id === deptId)?.name ?? "";
+  }
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -107,46 +132,83 @@ export default function WorkspaceChat() {
 
   async function handleSend(e: React.FormEvent) {
     e.preventDefault();
-    if (!input.trim() || !selectedAgent || loading || !apiKey) return;
+    if (!input.trim() || !selectedAgent || loading || !isReady) return;
 
     const userMsg: Message = { role: "user", content: input.trim() };
     const history = [...messages, userMsg];
     setMessages([...history, { role: "assistant", content: "" }]);
     setInput("");
     setLoading(true);
+    setAgentStatus(selectedAgent.id, "working", "");
+
+    const agentId = selectedAgent.id;
+    const agentName = selectedAgent.name;
 
     try {
-      const res = await fetch("/api/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
+      if (tier === "local") {
+        // ── Local: call Ollama directly from the browser ──
+        let text = "";
+        await streamLocalChat({
+          endpoint: localEndpoint,
+          model: localModel,
           messages: history.map((m) => ({ role: m.role, content: m.content })),
           systemPrompt: selectedAgent.systemPrompt,
-          apiKey,
-        }),
-      });
+          onChunk: (chunk) => {
+            text += chunk;
+            setAgentStatus(agentId, "working", text.slice(0, 60));
+            setMessages((prev) => [
+              ...prev.slice(0, -1),
+              { role: "assistant", content: text },
+            ]);
+          },
+        });
+        setAgentStatus(agentId, "idle", text.slice(0, 60));
+        toast.success(
+          lang === "ko" ? `${agentName}이(가) 작업을 완료했습니다.` : `${agentName} finished a task.`,
+          { duration: 4000 }
+        );
+      } else {
+        // ── BYOK: proxy through /api/chat (key never stored server-side) ──
+        const res = await fetch("/api/chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            messages: history.map((m) => ({ role: m.role, content: m.content })),
+            systemPrompt: selectedAgent.systemPrompt,
+            apiKey,
+          }),
+        });
 
-      if (!res.ok || !res.body) {
-        const err = await res.text();
-        setMessages((prev) => [
-          ...prev.slice(0, -1),
-          { role: "assistant", content: `Error: ${err}` },
-        ]);
-        return;
-      }
+        if (!res.ok || !res.body) {
+          const err = await res.text();
+          setMessages((prev) => [
+            ...prev.slice(0, -1),
+            { role: "assistant", content: `Error: ${err}` },
+          ]);
+          setAgentStatus(agentId, "idle");
+          return;
+        }
 
-      const reader = res.body.getReader();
-      const decoder = new TextDecoder();
-      let text = "";
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        let text = "";
 
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        text += decoder.decode(value, { stream: true });
-        setMessages((prev) => [
-          ...prev.slice(0, -1),
-          { role: "assistant", content: text },
-        ]);
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          text += decoder.decode(value, { stream: true });
+          setAgentStatus(agentId, "working", text.slice(0, 60));
+          setMessages((prev) => [
+            ...prev.slice(0, -1),
+            { role: "assistant", content: text },
+          ]);
+        }
+
+        setAgentStatus(agentId, "idle", text.slice(0, 60));
+        toast.success(
+          lang === "ko" ? `${agentName}이(가) 작업을 완료했습니다.` : `${agentName} finished a task.`,
+          { duration: 4000 }
+        );
       }
     } catch (err) {
       setMessages((prev) => [
@@ -156,6 +218,7 @@ export default function WorkspaceChat() {
           content: `Error: ${err instanceof Error ? err.message : "Unknown error"}`,
         },
       ]);
+      setAgentStatus(agentId, "idle");
     } finally {
       setLoading(false);
     }
@@ -175,13 +238,16 @@ export default function WorkspaceChat() {
       <aside className="hidden md:flex w-56 shrink-0 border-r flex-col">
         <div className="px-4 py-3 border-b">
           <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-            Agents
+            {t.workspace.agents}
           </p>
         </div>
         <AgentList
           groupedAgents={groupedAgents}
           selectedAgentId={selectedAgentId}
           onSelect={handleSelectAgent}
+          statusMap={statusMap}
+          lang={lang}
+          getDeptName={deptName}
         />
       </aside>
 
@@ -196,7 +262,7 @@ export default function WorkspaceChat() {
           {/* Slide-in panel */}
           <aside className="absolute left-0 top-0 bottom-0 w-72 bg-background border-r shadow-2xl flex flex-col">
             <div className="flex items-center justify-between px-4 py-4 border-b">
-              <p className="font-semibold text-sm">Choose an Agent</p>
+              <p className="font-semibold text-sm">{t.workspace.chooseAgent}</p>
               <button
                 onClick={() => setDrawerOpen(false)}
                 className="flex size-7 items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
@@ -208,6 +274,9 @@ export default function WorkspaceChat() {
               groupedAgents={groupedAgents}
               selectedAgentId={selectedAgentId}
               onSelect={handleSelectAgent}
+              statusMap={statusMap}
+              lang={lang}
+              getDeptName={deptName}
             />
           </aside>
         </div>
@@ -245,7 +314,7 @@ export default function WorkspaceChat() {
               onClick={() => setDrawerOpen(true)}
             >
               <BotIcon className="size-4 shrink-0" />
-              <span>Tap ☰ to choose an agent</span>
+              <span>{t.workspace.tapToChoose}</span>
             </button>
           )}
         </div>
@@ -257,16 +326,16 @@ export default function WorkspaceChat() {
               <span className="flex size-12 items-center justify-center rounded-2xl bg-muted text-2xl">
                 🤖
               </span>
-              <p className="font-medium">No agent selected</p>
+              <p className="font-medium">{t.workspace.noAgentTitle}</p>
               <p className="text-muted-foreground text-sm">
-                Tap the{" "}
+                {t.workspace.tapMenuPrefix}{t.workspace.tapMenuPrefix ? " " : ""}
                 <button
                   onClick={() => setDrawerOpen(true)}
                   className="inline-flex items-center gap-1 font-medium text-primary hover:underline"
                 >
-                  <MenuIcon className="size-3.5" /> menu
+                  <MenuIcon className="size-3.5" /> {t.workspace.tapMenuLabel}
                 </button>{" "}
-                to choose an agent.
+                {t.workspace.tapMenuSuffix}
               </p>
             </div>
           )}
@@ -277,7 +346,7 @@ export default function WorkspaceChat() {
               </span>
               <p className="font-medium">{selectedAgent.name}</p>
               <p className="text-muted-foreground text-sm">
-                {deptName(selectedAgent.departmentId)} · Ready to help
+                {deptName(selectedAgent.departmentId)} · {t.workspace.readyToHelp}
               </p>
             </div>
           )}
@@ -300,7 +369,7 @@ export default function WorkspaceChat() {
               >
                 {msg.content || (
                   <span className="italic text-muted-foreground">
-                    {selectedAgent?.name} is thinking…
+                    {selectedAgent?.name} {t.workspace.thinking}
                   </span>
                 )}
               </div>
@@ -315,11 +384,14 @@ export default function WorkspaceChat() {
         </div>
 
         {/* API key warning */}
-        {!apiKey && (
-          <div className="flex items-center gap-2 border-t bg-amber-50 px-4 py-2.5 text-xs text-amber-700">
+        {!isReady && (
+          <button
+            onClick={() => window.dispatchEvent(new CustomEvent("open-api-key-modal"))}
+            className="flex w-full items-center gap-2 border-t bg-amber-50 px-4 py-2.5 text-xs text-amber-700 hover:bg-amber-100 transition-colors text-left"
+          >
             <KeyIcon className="size-3.5 shrink-0" />
-            Add your Anthropic API key (top-right) to start chatting.
-          </div>
+            {t.workspace.apiKeyBanner}
+          </button>
         )}
 
         {/* Input */}
@@ -328,29 +400,29 @@ export default function WorkspaceChat() {
             <Textarea
               placeholder={
                 !selectedAgent
-                  ? "Choose an agent first…"
-                  : !apiKey
-                  ? "Add your API key to chat…"
-                  : `Message ${selectedAgent.name}…`
+                  ? t.workspace.placeholderNoAgent
+                  : !isReady
+                  ? t.workspace.placeholderNoKey
+                  : t.workspace.messagePlaceholder(selectedAgent.name)
               }
               rows={2}
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
-              disabled={!selectedAgent || loading || !apiKey}
+              disabled={!selectedAgent || loading || !isReady}
               className="resize-none min-h-[48px] max-h-36 text-base md:text-sm"
             />
             <Button
               type="submit"
               size="icon"
               className="size-10 shrink-0"
-              disabled={!selectedAgent || !input.trim() || loading || !apiKey}
+              disabled={!selectedAgent || !input.trim() || loading || !isReady}
             >
               <SendHorizonalIcon className="size-4" />
             </Button>
           </form>
           <p className="text-xs text-muted-foreground mt-1.5 hidden sm:block">
-            Enter to send · Shift+Enter for new line
+            {t.workspace.enterToSend}
           </p>
         </div>
       </div>

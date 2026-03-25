@@ -1,0 +1,123 @@
+import type { Dict } from "./en";
+
+export const ko: Dict = {
+  brand: "AI 워커 메이커",
+
+  nav: {
+    company: "회사",
+    workspace: "워크스페이스",
+    vision: "비전",
+  },
+
+  header: {
+    signOut: "로그아웃",
+  },
+
+  apiKey: {
+    addKey: "API 키 등록",
+    connected: "연결됨",
+    modalTitle: "Claude AI 연결하기",
+    modalSubtitle: "AI 직원들이 활동하려면 이 키가 필요해요",
+    howTo: "API 키 받는 방법 (무료):",
+    step1Title: "Anthropic 사이트에 가입하기",
+    step1Desc:
+      "아래 버튼을 클릭해 console.anthropic.com에 접속 후 회원가입 또는 로그인하세요.",
+    step2Title: "API 키 만들기",
+    step2Desc: '왼쪽 메뉴에서 "API Keys"를 클릭한 뒤 "Create Key" 버튼을 누르세요.',
+    step3Title: "여기에 붙여넣기",
+    step3Desc:
+      '키 이름을 아무거나 입력하고 "Create"를 누른 뒤, 생성된 키를 복사해 아래에 붙여넣으세요.',
+    openConsole: "1단계: Anthropic 사이트 열기",
+    privacy:
+      "API 키는 내 브라우저에만 저장되며, 우리 서버로 전송되지 않습니다. Anthropic에 직접 연결됩니다.",
+    connect: "연결",
+    disconnect: "연결 해제",
+    cancel: "취소",
+  },
+
+  dashboard: {
+    pageTitle: "내 회사",
+    newDept: "새 부서",
+    noDepts: "부서가 없습니다",
+    noDeptsDesc: "첫 번째 부서를 만들어 AI 직원 채용을 시작해 보세요.",
+    createDept: "부서 만들기",
+    deptFormTitle: "새 부서",
+    deptFormDesc: "회사에 새 업무 공간을 추가하세요.",
+    deptNameLabel: "부서 이름",
+    deptNamePlaceholder: "예) 재무팀, 법무팀, 디자인팀…",
+    createDeptBtn: "부서 생성",
+    cancel: "취소",
+    noAgents: "등록된 AI 직원이 없습니다.",
+    hireEmployee: "AI 직원 채용",
+    newEmployee: "새 AI 직원",
+    nameLabel: "이름",
+    roleLabel: "역할 설명",
+    hire: "채용",
+    chat: "대화",
+    stats: (d: number, a: number) => `부서 ${d}개 · AI 직원 ${a}명`,
+    employees: (n: number) => `${n}명`,
+    chatWith: (name: string) => `${name}와 대화`,
+    rolePlaceholder: (dept: string) =>
+      `나는 ${dept} 전문가입니다. 다음과 같은 업무를 도와드립니다…`,
+  },
+
+  workspace: {
+    agents: "AI 직원",
+    chooseAgent: "AI 직원 선택",
+    noAgentTitle: "AI 직원을 선택해 주세요",
+    tapMenuPrefix: "",
+    tapMenuLabel: "메뉴",
+    tapMenuSuffix: "를 눌러 AI 직원을 선택하세요.",
+    tapToChoose: "☰ 버튼을 눌러 AI 직원을 선택하세요",
+    readyToHelp: "대화 준비 완료",
+    apiKeyBanner:
+      "API 키를 등록하면 AI와 대화할 수 있어요. 여기를 눌러 등록하세요.",
+    thinking: "이(가) 생각 중…",
+    enterToSend: "Enter로 전송 · Shift+Enter로 줄바꿈",
+    placeholderNoAgent: "먼저 AI 직원을 선택하세요…",
+    placeholderNoKey: "API 키를 등록해야 대화할 수 있어요…",
+    messagePlaceholder: (name: string) => `${name}에게 메시지 보내기…`,
+  },
+
+  onboard: {
+    pageTitle: "회사 비전",
+    pageDesc: "수석 PM과 대화하며 회사의 비전과 팀 구조를 정의해 보세요.",
+    chatTitle: "수석 PM",
+    charterTitle: "실시간 차터",
+    chatTab: "대화",
+    charterTab: "차터",
+    placeholder: "아이디어를 말씀해 주세요…",
+    send: "전송",
+    thinking: "수석 PM이 생각 중…",
+    approveTeam: "팀 승인 및 회사 구성",
+    rejectTeam: "팀 재구성",
+    approving: "회사를 구성하는 중…",
+    teamApproved: "팀이 생성되었습니다! 이동 중…",
+    emptyCharter: "수석 PM과 대화하면 이곳에 차터가 실시간으로 나타납니다.",
+    sectionProblem: "문제",
+    sectionSolution: "해결책",
+    sectionAudience: "타겟 고객",
+    sectionFeatures: "핵심 기능",
+    sectionTone: "톤",
+    proposedTeam: "제안된 팀",
+    rationale: "이유",
+    firstTasks: "첫 번째 과제",
+  },
+
+  auth: {
+    welcome: "다시 오셨군요!",
+    signInTo: "AI 워커 메이커에 로그인",
+    email: "이메일",
+    password: "비밀번호",
+    signIn: "로그인",
+    signingIn: "로그인 중…",
+    demoAccount: "데모 계정으로 체험",
+    noAccount: "계정이 없으신가요?",
+    signUp: "회원가입",
+    createAccount: "계정 만들기",
+    joinUs: "AI 워커 메이커 시작하기",
+    fullName: "이름",
+    alreadyHave: "이미 계정이 있으신가요?",
+    creatingAccount: "계정 생성 중…",
+  },
+};

@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx vercel:*)",
+      "Bash(printf \"https://iympohipiaadmlldrfov.supabase.co\")",
+      "Bash(printf \"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml5bXBvaGlwaWFhZG1sbGRyZm92Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ0MjI5MzEsImV4cCI6MjA4OTk5ODkzMX0.pYQmE6dCA3AA7uT1XKEOoJVUMztKFtwb6FNkVT7kn9g\")",
+      "Bash(printf \"demo@aiworkermaker.com\")",
+      "Bash(printf \"Demo1234x\")",
+      "Bash(npx next:*)",
+      "Bash(npx shadcn@latest add sonner --yes)",
+      "Bash(C:/supabase-cli/supabase.exe --version)",
+      "Bash(C:/supabase-cli/supabase.exe projects:*)",
+      "Bash(C:/supabase-cli/supabase.exe init:*)",
+      "Bash(C:/supabase-cli/supabase.exe link:*)",
+      "Bash(C:/supabase-cli/supabase.exe db:*)",
+      "Bash(npx tsc:*)",
+      "Bash(npm run:*)"
+    ]
+  }
+}

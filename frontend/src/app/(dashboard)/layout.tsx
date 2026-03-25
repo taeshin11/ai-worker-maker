@@ -1,10 +1,11 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
-import { BotIcon } from "lucide-react";
+import { BotIcon, DownloadIcon } from "lucide-react";
 import SignOutButton from "@/components/dashboard/SignOutButton";
-import ApiKeyModal from "@/components/dashboard/ApiKeyModal";
+import ConnectionModal from "@/components/dashboard/ConnectionModal";
 import NavLinks from "@/components/dashboard/NavLinks";
+import LanguageToggle from "@/components/dashboard/LanguageToggle";
 
 export default async function DashboardLayout({
   children,
@@ -32,7 +33,15 @@ export default async function DashboardLayout({
             <NavLinks />
           </div>
           <div className="flex items-center gap-3">
-            <ApiKeyModal />
+            <Link
+              href="/download"
+              className="hidden sm:flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+            >
+              <DownloadIcon className="size-3.5" />
+              Free Local
+            </Link>
+            <LanguageToggle />
+            <ConnectionModal />
             <SignOutButton />
           </div>
         </div>

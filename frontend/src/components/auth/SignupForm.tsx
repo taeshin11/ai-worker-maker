@@ -7,8 +7,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { useT } from "@/lib/i18n/context";
 
 export default function SignupForm() {
+  const { t, lang } = useT();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -37,14 +39,20 @@ export default function SignupForm() {
     return (
       <Card className="w-full max-w-sm text-center">
         <CardHeader>
-          <CardTitle>Check your email</CardTitle>
+          <CardTitle>
+            {lang === "ko" ? "이메일을 확인하세요" : "Check your email"}
+          </CardTitle>
           <CardDescription>
-            We sent a confirmation link to <strong>{email}</strong>. Click it to activate your account.
+            {lang === "ko" ? (
+              <><strong>{email}</strong>로 확인 링크를 보냈습니다. 클릭하면 계정이 활성화됩니다.</>
+            ) : (
+              <>We sent a confirmation link to <strong>{email}</strong>. Click it to activate your account.</>
+            )}
           </CardDescription>
         </CardHeader>
         <CardFooter className="justify-center">
           <Link href="/login" className="text-sm underline underline-offset-4">
-            Back to sign in
+            {lang === "ko" ? "로그인으로 돌아가기" : "Back to sign in"}
           </Link>
         </CardFooter>
       </Card>
@@ -54,13 +62,13 @@ export default function SignupForm() {
   return (
     <Card className="w-full max-w-sm">
       <CardHeader>
-        <CardTitle className="text-2xl">Create account</CardTitle>
-        <CardDescription>Start building your AI workforce</CardDescription>
+        <CardTitle className="text-2xl">{t.auth.createAccount}</CardTitle>
+        <CardDescription>{t.auth.joinUs}</CardDescription>
       </CardHeader>
       <form onSubmit={handleSubmit}>
         <CardContent className="flex flex-col gap-4">
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="email">Email</Label>
+            <Label htmlFor="email">{t.auth.email}</Label>
             <Input
               id="email"
               type="email"
@@ -71,7 +79,7 @@ export default function SignupForm() {
             />
           </div>
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="password">Password</Label>
+            <Label htmlFor="password">{t.auth.password}</Label>
             <Input
               id="password"
               type="password"
@@ -86,12 +94,12 @@ export default function SignupForm() {
         </CardContent>
         <CardFooter className="flex flex-col gap-3">
           <Button type="submit" className="w-full" disabled={loading}>
-            {loading ? "Creating account…" : "Create account"}
+            {loading ? t.auth.creatingAccount : t.auth.createAccount}
           </Button>
           <p className="text-sm text-muted-foreground text-center">
-            Already have an account?{" "}
+            {t.auth.alreadyHave}{" "}
             <Link href="/login" className="text-foreground underline underline-offset-4">
-              Sign in
+              {t.auth.signIn}
             </Link>
           </p>
         </CardFooter>

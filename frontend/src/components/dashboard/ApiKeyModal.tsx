@@ -1,31 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { KeyIcon, XIcon, ExternalLinkIcon, CheckCircleIcon, ShieldIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useApiKey } from "@/lib/useApiKey";
-
-const STEPS = [
-  {
-    n: "1",
-    title: "Go to Anthropic Console",
-    desc: "Visit console.anthropic.com and sign in (or create a free account).",
-  },
-  {
-    n: "2",
-    title: "Open API Keys",
-    desc: 'Click "API Keys" in the left menu, then click "Create Key".',
-  },
-  {
-    n: "3",
-    title: "Copy & paste below",
-    desc: 'Give the key any name, click "Create", then copy and paste it here.',
-  },
-];
+import { useT } from "@/lib/i18n/context";
 
 export default function ApiKeyModal() {
   const { apiKey, setApiKey } = useApiKey();
+  const { t } = useT();
   const [open, setOpen] = useState(false);
   const [value, setValue] = useState("");
 
@@ -45,22 +29,37 @@ export default function ApiKeyModal() {
     setOpen(false);
   }
 
+  useEffect(() => {
+    window.addEventListener("open-api-key-modal", handleOpen);
+    return () => window.removeEventListener("open-api-key-modal", handleOpen);
+  }, [apiKey]);
+
+  const steps = [
+    { n: "1", title: t.apiKey.step1Title, desc: t.apiKey.step1Desc },
+    { n: "2", title: t.apiKey.step2Title, desc: t.apiKey.step2Desc },
+    { n: "3", title: t.apiKey.step3Title, desc: t.apiKey.step3Desc },
+  ];
+
   return (
     <>
       <button
         onClick={handleOpen}
-        title={apiKey ? "API key connected" : "Connect your Anthropic API key"}
+        title={apiKey ? t.apiKey.connected : t.apiKey.addKey}
         className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm transition-colors hover:bg-muted"
       >
         {apiKey ? (
           <>
             <CheckCircleIcon className="size-4 text-emerald-500" />
-            <span className="hidden sm:inline text-emerald-600 font-medium text-xs">Connected</span>
+            <span className="hidden sm:inline text-emerald-600 font-medium text-xs">
+              {t.apiKey.connected}
+            </span>
           </>
         ) : (
           <>
             <KeyIcon className="size-4 text-amber-500" />
-            <span className="hidden sm:inline text-amber-600 font-medium text-xs">Add API Key</span>
+            <span className="hidden sm:inline text-amber-600 font-medium text-xs">
+              {t.apiKey.addKey}
+            </span>
           </>
         )}
       </button>
@@ -75,10 +74,8 @@ export default function ApiKeyModal() {
                   <KeyIcon className="size-5 text-primary" />
                 </div>
                 <div>
-                  <h2 className="font-semibold text-base">Connect to Claude AI</h2>
-                  <p className="text-xs text-muted-foreground mt-0.5">
-                    Your agents need this to come to life
-                  </p>
+                  <h2 className="font-semibold text-base">{t.apiKey.modalTitle}</h2>
+                  <p className="text-xs text-muted-foreground mt-0.5">{t.apiKey.modalSubtitle}</p>
                 </div>
               </div>
               <button
@@ -91,9 +88,9 @@ export default function ApiKeyModal() {
 
             {/* Steps */}
             <div className="px-6 pb-4">
-              <p className="text-sm font-medium mb-3">How to get your free API key:</p>
+              <p className="text-sm font-medium mb-3">{t.apiKey.howTo}</p>
               <ol className="flex flex-col gap-3">
-                {STEPS.map((step) => (
+                {steps.map((step) => (
                   <li key={step.n} className="flex gap-3">
                     <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs font-bold mt-0.5">
                       {step.n}
@@ -111,7 +108,7 @@ export default function ApiKeyModal() {
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-1.5 mt-4 text-xs text-primary font-medium hover:underline"
               >
-                Open Anthropic Console
+                {t.apiKey.openConsole}
                 <ExternalLinkIcon className="size-3" />
               </a>
             </div>
@@ -131,26 +128,24 @@ export default function ApiKeyModal() {
             {/* Privacy note */}
             <div className="mx-6 mb-4 flex items-start gap-2 rounded-lg bg-muted/60 px-3 py-2.5">
               <ShieldIcon className="size-4 text-muted-foreground shrink-0 mt-0.5" />
-              <p className="text-xs text-muted-foreground">
-                Your key is stored <strong>only in your browser</strong> and is never sent to our servers. It goes directly to Anthropic.
-              </p>
+              <p className="text-xs text-muted-foreground">{t.apiKey.privacy}</p>
             </div>
 
             {/* Footer */}
             <div className="flex items-center justify-between border-t bg-muted/40 px-6 py-4">
               {apiKey ? (
                 <Button variant="destructive" size="sm" onClick={handleRemove}>
-                  Disconnect
+                  {t.apiKey.disconnect}
                 </Button>
               ) : (
                 <span />
               )}
               <div className="flex gap-2">
                 <Button variant="ghost" size="sm" onClick={() => setOpen(false)}>
-                  Cancel
+                  {t.apiKey.cancel}
                 </Button>
                 <Button size="sm" onClick={handleSave} disabled={!value.trim()}>
-                  Connect
+                  {t.apiKey.connect}
                 </Button>
               </div>
             </div>
