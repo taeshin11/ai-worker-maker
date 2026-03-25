@@ -227,8 +227,11 @@ export default function WorkspaceChat() {
     e.preventDefault();
     if (!input.trim() || !selectedAgent || loading) return;
 
+    // Read key fresh from localStorage to avoid stale closure after modal save
+    const currentKey = apiKey || localStorage.getItem("anthropic_api_key") || "";
+
     // Intercept: if BYOK key is missing, open the modal and preserve the message
-    if (!apiKey) {
+    if (!currentKey) {
       pendingMessageRef.current = input.trim();
       window.dispatchEvent(new CustomEvent("open-api-key-modal", {
         detail: {
@@ -256,7 +259,7 @@ export default function WorkspaceChat() {
           body: JSON.stringify({
             messages: history.map((m) => ({ role: m.role, content: m.content })),
             systemPrompt: selectedAgent.systemPrompt,
-            apiKey,
+            apiKey: currentKey,
           }),
         });
 

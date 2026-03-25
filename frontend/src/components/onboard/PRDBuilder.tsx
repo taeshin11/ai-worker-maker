@@ -116,8 +116,11 @@ export default function PRDBuilder() {
   async function sendMessage(text: string) {
     if (!text.trim() || loading) return;
 
+    // Read key fresh from localStorage to avoid stale closure after modal save
+    const currentKey = apiKey || localStorage.getItem("anthropic_api_key") || "";
+
     // Intercept: if no key, open modal with context, preserve the message
-    if (!apiKey) {
+    if (!currentKey) {
       pendingMessageRef.current = text;
       window.dispatchEvent(new CustomEvent("open-api-key-modal", {
         detail: {
@@ -146,7 +149,7 @@ export default function PRDBuilder() {
       const res = await fetch("/api/pm-chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messages: apiMessages, apiKey }),
+        body: JSON.stringify({ messages: apiMessages, apiKey: currentKey }),
       });
 
       if (!res.ok || !res.body) {
