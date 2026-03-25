@@ -15,7 +15,7 @@ export default function SignupForm() {
   const [success, setSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  async function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.SubmitEvent<HTMLFormElement>) {
     e.preventDefault();
     setLoading(true);
     setError(null);
@@ -55,7 +55,7 @@ export default function SignupForm() {
     <Card className="w-full max-w-sm">
       <CardHeader>
         <CardTitle className="text-2xl">Create account</CardTitle>
-        <CardDescription>Start building your AI Company</CardDescription>
+        <CardDescription>Start building your AI workforce</CardDescription>
       </CardHeader>
       <form onSubmit={handleSubmit}>
         <CardContent className="flex flex-col gap-4">

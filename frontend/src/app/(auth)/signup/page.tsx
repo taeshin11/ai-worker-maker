@@ -1,6 +1,6 @@
 import SignupForm from "@/components/auth/SignupForm";
 
-export const metadata = { title: "Create account — AI Company Builder" };
+export const metadata = { title: "Create account — AI Worker Maker" };
 
 export default function SignupPage() {
   return (

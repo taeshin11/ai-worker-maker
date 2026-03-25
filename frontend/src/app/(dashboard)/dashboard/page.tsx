@@ -1,4 +1,4 @@
-export const metadata = { title: "Dashboard — AI Company Builder" };
+export const metadata = { title: "Dashboard — AI Worker Maker" };
 
 export default function DashboardPage() {
   return (

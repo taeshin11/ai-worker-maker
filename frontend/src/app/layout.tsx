@@ -13,8 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "AI Company Builder",
-  description: "Build and manage your virtual AI company",
+  title: "AI Worker Maker",
+  description: "Build and manage your virtual AI workforce",
 };
 
 export default function RootLayout({

@@ -16,7 +16,7 @@ export default function LoginForm() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  async function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.SubmitEvent<HTMLFormElement>) {
     e.preventDefault();
     setLoading(true);
     setError(null);
@@ -38,7 +38,7 @@ export default function LoginForm() {
     <Card className="w-full max-w-sm">
       <CardHeader>
         <CardTitle className="text-2xl">Welcome back</CardTitle>
-        <CardDescription>Sign in to your AI Company</CardDescription>
+        <CardDescription>Sign in to AI Worker Maker</CardDescription>
       </CardHeader>
       <form onSubmit={handleSubmit}>
         <CardContent className="flex flex-col gap-4">

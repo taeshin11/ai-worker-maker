@@ -1,4 +1,4 @@
-# Project: AI Agent Company Builder
+# Project: AI Agent Worker Maker
 
 ## 1. Overview
 A web platform where users can structure a virtual company. Users can create departments, assign AI employees (agents) to those departments with specific roles, and request tasks.
