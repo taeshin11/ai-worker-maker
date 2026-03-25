@@ -101,6 +101,11 @@ export const ko: Dict = {
     copyCode: "코드 복사",
     codeCopied: "복사됨!",
     codePreview: "코드 미리보기",
+    copyMessage: "복사",
+    editMessage: "수정",
+    deleteMessage: "삭제",
+    resend: "다시 보내기",
+    editPlaceholder: "메시지를 수정하세요…",
   },
 
   onboard: {

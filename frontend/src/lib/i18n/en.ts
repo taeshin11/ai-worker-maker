@@ -88,6 +88,11 @@ export type Dict = {
     copyCode: string;
     codeCopied: string;
     codePreview: string;
+    copyMessage: string;
+    editMessage: string;
+    deleteMessage: string;
+    resend: string;
+    editPlaceholder: string;
   };
   onboard: {
     pageTitle: string;
@@ -249,6 +254,11 @@ export const en: Dict = {
     copyCode: "Copy code",
     codeCopied: "Copied!",
     codePreview: "Code Preview",
+    copyMessage: "Copy",
+    editMessage: "Edit",
+    deleteMessage: "Delete",
+    resend: "Resend",
+    editPlaceholder: "Edit your message…",
   },
 
   onboard: {

@@ -11,6 +11,10 @@ import {
   RefreshCwIcon,
   XIcon,
   Trash2Icon,
+  CopyIcon,
+  CheckIcon,
+  PencilIcon,
+  TrashIcon,
 } from "lucide-react";
 import Markdown from "react-markdown";
 import { Button } from "@/components/ui/button";
@@ -95,6 +99,63 @@ function AgentList({
   );
 }
 
+/** Gemini-style hover actions on each message bubble. */
+function MessageActions({
+  role,
+  content,
+  onCopy,
+  onEdit,
+  onDelete,
+  t,
+}: {
+  role: "user" | "assistant";
+  content: string;
+  onCopy: () => void;
+  onEdit?: () => void;
+  onDelete: () => void;
+  t: import("@/lib/i18n/en").Dict;
+}) {
+  const [copied, setCopied] = useState(false);
+
+  function handleCopy() {
+    onCopy();
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }
+
+  return (
+    <div
+      className={`flex items-center gap-0.5 opacity-0 group-hover/msg:opacity-100 transition-opacity ${
+        role === "user" ? "justify-end" : "justify-start"
+      }`}
+    >
+      <button
+        onClick={handleCopy}
+        className="p-1 rounded-md text-muted-foreground/60 hover:text-foreground hover:bg-muted transition-colors"
+        title={t.workspace.copyMessage}
+      >
+        {copied ? <CheckIcon className="size-3.5 text-emerald-500" /> : <CopyIcon className="size-3.5" />}
+      </button>
+      {onEdit && (
+        <button
+          onClick={onEdit}
+          className="p-1 rounded-md text-muted-foreground/60 hover:text-foreground hover:bg-muted transition-colors"
+          title={t.workspace.editMessage}
+        >
+          <PencilIcon className="size-3.5" />
+        </button>
+      )}
+      <button
+        onClick={onDelete}
+        className="p-1 rounded-md text-muted-foreground/60 hover:text-destructive hover:bg-destructive/10 transition-colors"
+        title={t.workspace.deleteMessage}
+      >
+        <TrashIcon className="size-3.5" />
+      </button>
+    </div>
+  );
+}
+
 /** Renders markdown with code block toolbars (Preview/Download/Copy/GitHub). */
 function MarkdownWithArtifacts({
   content,
@@ -156,6 +217,8 @@ export default function WorkspaceChat() {
   const [loading, setLoading] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [previewArtifact, setPreviewArtifact] = useState<CodeArtifact | null>(null);
+  const [editingIdx, setEditingIdx] = useState<number | null>(null);
+  const [editText, setEditText] = useState("");
   const bottomRef = useRef<HTMLDivElement>(null);
   const pendingMessageRef = useRef<string>("");
 
@@ -326,6 +389,94 @@ export default function WorkspaceChat() {
     }
   }
 
+  function handleDeleteMessage(idx: number) {
+    setMessages((prev) => prev.filter((_, i) => i !== idx));
+  }
+
+  function startEditMessage(idx: number) {
+    setEditingIdx(idx);
+    setEditText(messages[idx].content);
+  }
+
+  function cancelEdit() {
+    setEditingIdx(null);
+    setEditText("");
+  }
+
+  function submitEdit(idx: number) {
+    if (!editText.trim()) return;
+    // Update the user message, remove all messages after it, then resend
+    const updated = messages.slice(0, idx);
+    updated.push({ role: "user", content: editText.trim() });
+    setMessages(updated);
+    setEditingIdx(null);
+    setEditText("");
+    // Trigger a new response by resending
+    const currentKey = apiKey || localStorage.getItem("anthropic_api_key") || "";
+    if (currentKey && selectedAgent && !loading) {
+      setMessages([...updated, { role: "assistant", content: "" }]);
+      setLoading(true);
+      setAgentStatus(selectedAgent.id, "working", "");
+      const agentId = selectedAgent.id;
+      const agentName = selectedAgent.name;
+      fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          messages: updated.map((m) => ({ role: m.role, content: m.content })),
+          systemPrompt: selectedAgent.systemPrompt,
+          apiKey: currentKey,
+        }),
+      }).then(async (res) => {
+        if (!res.ok || !res.body) {
+          const body = await res.text();
+          const code = parseErrorCode(body);
+          const friendly = friendlyMessage(code, t);
+          setMessages((prev) => [
+            ...prev.slice(0, -1),
+            { role: "assistant", content: `⚠️ ${friendly}` },
+          ]);
+          setAgentStatus(agentId, "idle");
+          setLoading(false);
+          return;
+        }
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        let text = "";
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          text += decoder.decode(value, { stream: true });
+          setAgentStatus(agentId, "working", text.slice(0, 60));
+          setMessages((prev) => [
+            ...prev.slice(0, -1),
+            { role: "assistant", content: text },
+          ]);
+        }
+        const streamError = parseErrorCode(text);
+        if (streamError) {
+          const friendly = friendlyMessage(streamError, t);
+          setMessages((prev) => [
+            ...prev.slice(0, -1),
+            { role: "assistant", content: `⚠️ ${friendly}` },
+          ]);
+          setAgentStatus(agentId, "idle");
+        } else {
+          setAgentStatus(agentId, "idle", text.slice(0, 60));
+          toast.success(t.workspace.taskDone(agentName), { duration: 4000 });
+        }
+        setLoading(false);
+      }).catch(() => {
+        setMessages((prev) => [
+          ...prev.slice(0, -1),
+          { role: "assistant", content: `⚠️ ${friendlyMessage(null, t)}` },
+        ]);
+        setAgentStatus(agentId, "idle");
+        setLoading(false);
+      });
+    }
+  }
+
   return (
     <div className="flex h-full overflow-hidden">
 
@@ -464,45 +615,102 @@ export default function WorkspaceChat() {
               )}
             </div>
           )}
-          {messages.map((msg, i) => (
-            <div
-              key={i}
-              className={`flex gap-2 ${msg.role === "user" ? "justify-end" : "justify-start"}`}
-            >
-              {msg.role === "assistant" && (
-                <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-muted mt-0.5 text-xs font-bold text-muted-foreground">
-                  {selectedAgent?.name.slice(0, 2).toUpperCase() ?? "AI"}
-                </span>
-              )}
+          {messages.map((msg, i) => {
+            const isUser = msg.role === "user";
+            const isEditing = editingIdx === i;
+            const isLastAssistant = !isUser && i === messages.length - 1 && !!msg.content;
+
+            return (
               <div
-                className={`max-w-[85%] md:max-w-[70%] rounded-2xl px-4 py-3 text-sm leading-relaxed ${
-                  msg.role === "user"
-                    ? "bg-primary text-primary-foreground rounded-br-sm whitespace-pre-wrap"
-                    : "bg-muted text-foreground rounded-bl-sm prose prose-sm prose-neutral dark:prose-invert max-w-none [&>*:first-child]:mt-0 [&>*:last-child]:mb-0"
-                }`}
+                key={i}
+                className={`group/msg flex gap-2 ${isUser ? "justify-end" : "justify-start"}`}
               >
-                {msg.content ? (
-                  msg.role === "assistant" ? (
-                    <MarkdownWithArtifacts
-                      content={msg.content}
-                      onPreview={setPreviewArtifact}
-                    />
+                {!isUser && (
+                  <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-muted mt-0.5 text-xs font-bold text-muted-foreground">
+                    {selectedAgent?.name.slice(0, 2).toUpperCase() ?? "AI"}
+                  </span>
+                )}
+
+                <div className="flex flex-col gap-1 max-w-[85%] md:max-w-[70%]">
+                  {/* Edit mode */}
+                  {isEditing ? (
+                    <div className="flex flex-col gap-2 bg-muted rounded-2xl p-3">
+                      <textarea
+                        value={editText}
+                        onChange={(e) => setEditText(e.target.value)}
+                        className="w-full rounded-lg border bg-background px-3 py-2 text-sm resize-none min-h-[60px] outline-none focus:ring-2 focus:ring-primary/30"
+                        placeholder={t.workspace.editPlaceholder}
+                        autoFocus
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" && !e.shiftKey) {
+                            e.preventDefault();
+                            submitEdit(i);
+                          }
+                          if (e.key === "Escape") cancelEdit();
+                        }}
+                      />
+                      <div className="flex gap-1.5 justify-end">
+                        <button
+                          onClick={cancelEdit}
+                          className="px-2.5 py-1 text-xs rounded-md text-muted-foreground hover:bg-background transition-colors"
+                        >
+                          {t.dashboard.cancel}
+                        </button>
+                        <button
+                          onClick={() => submitEdit(i)}
+                          className="px-2.5 py-1 text-xs rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-colors font-medium"
+                        >
+                          {t.workspace.resend}
+                        </button>
+                      </div>
+                    </div>
                   ) : (
-                    msg.content
-                  )
-                ) : (
-                  <span className="italic text-muted-foreground">
-                    {selectedAgent?.name} {t.workspace.thinking}
+                    /* Normal message bubble */
+                    <div
+                      className={`rounded-2xl px-4 py-3 text-sm leading-relaxed ${
+                        isUser
+                          ? "bg-primary text-primary-foreground rounded-br-sm whitespace-pre-wrap"
+                          : "bg-muted text-foreground rounded-bl-sm prose prose-sm prose-neutral dark:prose-invert max-w-none [&>*:first-child]:mt-0 [&>*:last-child]:mb-0"
+                      }`}
+                    >
+                      {msg.content ? (
+                        !isUser ? (
+                          <MarkdownWithArtifacts
+                            content={msg.content}
+                            onPreview={setPreviewArtifact}
+                          />
+                        ) : (
+                          msg.content
+                        )
+                      ) : (
+                        <span className="italic text-muted-foreground">
+                          {selectedAgent?.name} {t.workspace.thinking}
+                        </span>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Hover action buttons — Gemini style */}
+                  {!isEditing && msg.content && (
+                    <MessageActions
+                      role={msg.role}
+                      content={msg.content}
+                      onCopy={() => navigator.clipboard.writeText(msg.content)}
+                      onEdit={isUser ? () => startEditMessage(i) : undefined}
+                      onDelete={() => handleDeleteMessage(i)}
+                      t={t}
+                    />
+                  )}
+                </div>
+
+                {isUser && !isEditing && (
+                  <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-muted mt-0.5">
+                    <UserIcon className="size-3.5 text-muted-foreground" />
                   </span>
                 )}
               </div>
-              {msg.role === "user" && (
-                <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-muted mt-0.5">
-                  <UserIcon className="size-3.5 text-muted-foreground" />
-                </span>
-              )}
-            </div>
-          ))}
+            );
+          })}
           <div ref={bottomRef} />
         </div>
 
