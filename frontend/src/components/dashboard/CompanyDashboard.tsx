@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { PlusIcon, MessageSquareIcon, BuildingIcon, SparklesIcon, TrashIcon, LoaderIcon, LightbulbIcon, PencilIcon, CheckIcon, XIcon } from "lucide-react";
+import { PlusIcon, MessageSquareIcon, BuildingIcon, SparklesIcon, TrashIcon, LoaderIcon, LightbulbIcon, PencilIcon, CheckIcon, XIcon, RotateCcwIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -183,48 +183,67 @@ export default function CompanyDashboard() {
 
       <div className="mx-auto max-w-6xl px-6 py-8 flex flex-col gap-6">
         {/* Vision banner */}
-        <button
-          onClick={() => router.push("/onboard")}
-          className={`w-full text-left rounded-xl border p-4 flex items-center gap-4 transition-all hover:shadow-md ${
-            vision?.status === "approved"
-              ? "bg-emerald-50 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-800"
-              : "bg-primary/5 border-primary/20 hover:bg-primary/10"
-          }`}
-        >
-          <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
-            <LightbulbIcon className="size-5" />
-          </div>
-          <div className="flex-1 min-w-0">
-            {vision?.title ? (
-              <>
-                <p className="font-semibold text-sm truncate">{vision.title}</p>
-                <p className="text-xs text-muted-foreground truncate mt-0.5">
-                  {vision.tagline || t.dashboard.visionView}
-                </p>
-              </>
-            ) : (
-              <>
-                <p className="font-semibold text-sm">
-                  {t.dashboard.visionDefine}
-                </p>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  {t.dashboard.visionDefineDesc}
-                </p>
-              </>
+        <div className={`w-full rounded-xl border p-4 flex items-center gap-4 transition-all ${
+          vision?.status === "approved"
+            ? "bg-emerald-50 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-800"
+            : "bg-primary/5 border-primary/20"
+        }`}>
+          <button
+            onClick={() => router.push("/onboard")}
+            className="flex items-center gap-4 flex-1 min-w-0 text-left hover:opacity-80 transition-opacity"
+          >
+            <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+              <LightbulbIcon className="size-5" />
+            </div>
+            <div className="flex-1 min-w-0">
+              {vision?.title ? (
+                <>
+                  <p className="font-semibold text-sm truncate">{vision.title}</p>
+                  <p className="text-xs text-muted-foreground truncate mt-0.5">
+                    {vision.tagline || t.dashboard.visionView}
+                  </p>
+                </>
+              ) : (
+                <>
+                  <p className="font-semibold text-sm">
+                    {t.dashboard.visionDefine}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    {t.dashboard.visionDefineDesc}
+                  </p>
+                </>
+              )}
+            </div>
+          </button>
+          <div className="flex items-center gap-2 shrink-0">
+            {vision?.status === "approved" && (
+              <button
+                onClick={async () => {
+                  if (!window.confirm(t.dashboard.newVisionConfirm)) return;
+                  await fetch("/api/visions", { method: "DELETE" });
+                  setVision(null);
+                  router.push("/onboard");
+                }}
+                className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-primary transition-colors px-2 py-1 rounded-md hover:bg-background/60"
+                title={t.dashboard.newVision}
+              >
+                <RotateCcwIcon className="size-3.5" />
+                {t.dashboard.newVision}
+              </button>
             )}
+            <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${
+              vision?.status === "approved"
+                ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400"
+                : "bg-primary/10 text-primary"
+            }`}>
+              {vision?.status === "approved"
+                ? t.dashboard.visionApproved
+                : vision?.title
+                ? t.dashboard.visionDraft
+                : `${t.dashboard.visionStart} →`}
+            </span>
           </div>
-          <span className={`text-xs font-medium shrink-0 px-2.5 py-1 rounded-full ${
-            vision?.status === "approved"
-              ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400"
-              : "bg-primary/10 text-primary"
-          }`}>
-            {vision?.status === "approved"
-              ? t.dashboard.visionApproved
-              : vision?.title
-              ? t.dashboard.visionDraft
-              : `${t.dashboard.visionStart} →`}
-          </span>
-        </button>
+        </div>
 
         {/* New Department form */}
         {showDeptForm && (

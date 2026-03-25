@@ -71,6 +71,11 @@ export const ko: Dict = {
     editRole: "역할 수정",
     editRolePlaceholder: "이 AI 직원의 역할을 설명하세요…",
     save: "저장",
+    newVision: "새 비전",
+    newVisionConfirm: "새 비전을 시작할까요? 현재 비전은 보관되고 수석 PM이 리셋됩니다.",
+    approvalSuccess: (depts: number, agents: number) =>
+      `부서 ${depts}개, AI 직원 ${agents}명이 생성되었습니다!`,
+    approvalPartial: "일부 항목을 생성하지 못했습니다. 확인 후 다시 시도해 주세요.",
   },
 
   workspace: {
@@ -135,6 +140,9 @@ export const ko: Dict = {
     phaseRefining: "다듬는 중",
     phaseProposing: "팀 제안 중",
     phaseApproved: "승인됨",
+    resetVision: "새 비전 시작",
+    resetVisionConfirm: "새 비전을 시작할까요? 기존 팀은 유지되지만 수석 PM이 리셋됩니다.",
+    newVisionStarting: "새로 시작하는 중…",
   },
 
   auth: {

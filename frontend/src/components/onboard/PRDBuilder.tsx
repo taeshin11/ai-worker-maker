@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { SendIcon, LoaderIcon, RefreshCwIcon } from "lucide-react";
+import { SendIcon, LoaderIcon, RefreshCwIcon, RotateCcwIcon } from "lucide-react";
 import Markdown from "react-markdown";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -224,16 +224,34 @@ export default function PRDBuilder() {
     if (!team || approving) return;
     setApproving(true);
 
+    let deptCount = 0;
+    let agentCount = 0;
+
     try {
-      // Build departments and agents in DB
+      // Build departments, agents, and per-department PMs in DB
       for (const dept of team.departments) {
         const created = await addDepartment(dept.name);
-        if (!created) continue;
+        if (!created) {
+          console.error(`Failed to create department: ${dept.name}`);
+          continue;
+        }
+        deptCount++;
+
+        // Create a PM agent for this department
+        const pmName = lang === "ko" ? `${dept.name} PM` : `${dept.name} PM`;
+        const pmPrompt = lang === "ko"
+          ? `당신은 "${dept.name}" 부서의 프로젝트 매니저입니다. 이 부서의 업무를 총괄하고, 팀원들의 작업을 조율하며, 진행 상황을 관리합니다. 부서 목표: ${dept.rationale}`
+          : `You are the Project Manager of the "${dept.name}" department. You oversee all work in this department, coordinate team members, and track progress. Department goal: ${dept.rationale}`;
+        const pmCreated = await addAgent(pmName, pmPrompt, created.id);
+        if (pmCreated) agentCount++;
+
+        // Create the proposed agents for this department
         const deptAgents = team.agents.filter(
           (a) => a.departmentName === dept.name
         );
         for (const agent of deptAgents) {
-          await addAgent(agent.name, agent.systemPrompt, created.id);
+          const agentCreated = await addAgent(agent.name, agent.systemPrompt, created.id);
+          if (agentCreated) agentCount++;
         }
       }
 
@@ -245,23 +263,57 @@ export default function PRDBuilder() {
       });
 
       setPhase("approved");
-      toast.success(
-        lang === "ko" ? "팀이 생성되었습니다! 🎉" : "Your team is ready! 🎉"
-      );
 
-      // Tell PM the team was approved
-      const approvedMsg: Msg = {
-        role: "user",
-        content: "The team has been approved. Please acknowledge this.",
-      };
-      setMessages((prev) => [...prev, approvedMsg]);
+      if (deptCount > 0) {
+        toast.success(t.dashboard.approvalSuccess(deptCount, agentCount));
+      } else {
+        toast.error(t.dashboard.approvalPartial);
+      }
 
       setTimeout(() => router.push("/dashboard"), 1500);
-    } catch {
-      toast.error(lang === "ko" ? "오류가 발생했습니다." : "Something went wrong.");
+    } catch (err) {
+      console.error("Approval failed:", err);
+      if (deptCount > 0) {
+        // Partial success
+        toast.warning(t.dashboard.approvalPartial);
+        setTimeout(() => router.push("/dashboard"), 1500);
+      } else {
+        toast.error(lang === "ko" ? "오류가 발생했습니다." : "Something went wrong.");
+      }
     } finally {
       setApproving(false);
     }
+  }
+
+  async function handleResetVision() {
+    if (!window.confirm(t.onboard.resetVisionConfirm)) return;
+
+    // Archive the current vision by deleting it (or setting status to archived)
+    try {
+      await fetch("/api/visions", {
+        method: "DELETE",
+      });
+    } catch {}
+
+    // Reset all local state
+    setMessages([]);
+    setCharter(EMPTY_CHARTER);
+    setPhase("exploring");
+    setTeam(null);
+    setStreamingText("");
+    setInput("");
+    setInitialized(false);
+
+    // Re-trigger greeting
+    setTimeout(() => {
+      const greeting =
+        lang === "ko"
+          ? "안녕하세요! 저는 AI 워커 메이커의 수석 PM입니다. 여러분의 아이디어를 함께 다듬고 멋진 AI 팀을 구성해 드릴게요. 어떤 회사 또는 서비스를 만들고 싶으신가요?"
+          : "Hi! I'm your Chief PM co-founder. I'll help you shape your company idea into a clear vision and build your AI team. What kind of company or product do you want to build?";
+      setMessages([{ role: "assistant", content: greeting }]);
+      setInitialized(true);
+      toast.success(t.onboard.newVisionStarting);
+    }, 100);
   }
 
   function handleRejectTeam() {
@@ -310,14 +362,26 @@ export default function PRDBuilder() {
           } sm:flex sm:w-[42%]`}
         >
           {/* 1. Chat Pane Header — PINNED (shrink-0) */}
-          <div className="shrink-0 border-b px-4 py-3 z-10 bg-background">
-            <p className="font-semibold text-sm">{t.onboard.chatTitle}</p>
-            <p className="text-xs text-muted-foreground">
-              {phase === "exploring" ? t.onboard.phaseExploring
-                : phase === "refining" ? t.onboard.phaseRefining
-                : phase === "proposing" ? t.onboard.phaseProposing
-                : t.onboard.phaseApproved}
-            </p>
+          <div className="shrink-0 border-b px-4 py-3 z-10 bg-background flex items-center justify-between">
+            <div>
+              <p className="font-semibold text-sm">{t.onboard.chatTitle}</p>
+              <p className="text-xs text-muted-foreground">
+                {phase === "exploring" ? t.onboard.phaseExploring
+                  : phase === "refining" ? t.onboard.phaseRefining
+                  : phase === "proposing" ? t.onboard.phaseProposing
+                  : t.onboard.phaseApproved}
+              </p>
+            </div>
+            {(phase === "approved" || charter.title) && (
+              <button
+                onClick={handleResetVision}
+                className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-primary transition-colors px-2 py-1 rounded-md hover:bg-muted"
+                title={t.onboard.resetVision}
+              >
+                <RotateCcwIcon className="size-3.5" />
+                {t.onboard.resetVision}
+              </button>
+            )}
           </div>
 
           {/* 2. Message Area — ONLY this scrolls */}

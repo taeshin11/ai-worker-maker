@@ -61,6 +61,10 @@ export type Dict = {
     editRole: string;
     editRolePlaceholder: string;
     save: string;
+    newVision: string;
+    newVisionConfirm: string;
+    approvalSuccess: (depts: number, agents: number) => string;
+    approvalPartial: string;
   };
   workspace: {
     agents: string;
@@ -121,6 +125,9 @@ export type Dict = {
     phaseRefining: string;
     phaseProposing: string;
     phaseApproved: string;
+    resetVision: string;
+    resetVisionConfirm: string;
+    newVisionStarting: string;
   };
   errors: {
     overloaded: string;
@@ -224,6 +231,11 @@ export const en: Dict = {
     editRole: "Edit role",
     editRolePlaceholder: "Describe this agent's role…",
     save: "Save",
+    newVision: "New Vision",
+    newVisionConfirm: "Start a new vision? This will archive the current one and reset the Chief PM.",
+    approvalSuccess: (depts, agents) =>
+      `Created ${depts} department${depts !== 1 ? "s" : ""} and ${agents} AI employee${agents !== 1 ? "s" : ""}!`,
+    approvalPartial: "Some items could not be created. Please check and try again.",
   },
 
   workspace: {
@@ -288,6 +300,9 @@ export const en: Dict = {
     phaseRefining: "Refining",
     phaseProposing: "Proposing",
     phaseApproved: "Approved",
+    resetVision: "Start New Vision",
+    resetVisionConfirm: "Start a new vision? The current team will remain, but the Chief PM will reset.",
+    newVisionStarting: "Starting fresh…",
   },
 
   auth: {
