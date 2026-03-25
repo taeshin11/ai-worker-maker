@@ -17,6 +17,7 @@ import {
   type TeamProposal,
   type PMPhase,
 } from "@/lib/charter";
+import { kickoffAgents } from "@/lib/kickoffAgents";
 import CharterDoc from "./CharterDoc";
 import TeamProposalPanel from "./TeamProposalPanel";
 
@@ -226,6 +227,7 @@ export default function PRDBuilder() {
 
     let deptCount = 0;
     let agentCount = 0;
+    const createdAgents: { id: string; name: string; systemPrompt: string }[] = [];
 
     try {
       // Build departments, agents, and per-department PMs in DB
@@ -238,12 +240,15 @@ export default function PRDBuilder() {
         deptCount++;
 
         // Create a PM agent for this department
-        const pmName = lang === "ko" ? `${dept.name} PM` : `${dept.name} PM`;
+        const pmName = `${dept.name} PM`;
         const pmPrompt = lang === "ko"
           ? `당신은 "${dept.name}" 부서의 프로젝트 매니저입니다. 이 부서의 업무를 총괄하고, 팀원들의 작업을 조율하며, 진행 상황을 관리합니다. 부서 목표: ${dept.rationale}`
           : `You are the Project Manager of the "${dept.name}" department. You oversee all work in this department, coordinate team members, and track progress. Department goal: ${dept.rationale}`;
         const pmCreated = await addAgent(pmName, pmPrompt, created.id);
-        if (pmCreated) agentCount++;
+        if (pmCreated) {
+          agentCount++;
+          createdAgents.push({ id: pmCreated.id, name: pmCreated.name, systemPrompt: pmPrompt });
+        }
 
         // Create the proposed agents for this department
         const deptAgents = team.agents.filter(
@@ -251,7 +256,10 @@ export default function PRDBuilder() {
         );
         for (const agent of deptAgents) {
           const agentCreated = await addAgent(agent.name, agent.systemPrompt, created.id);
-          if (agentCreated) agentCount++;
+          if (agentCreated) {
+            agentCount++;
+            createdAgents.push({ id: agentCreated.id, name: agentCreated.name, systemPrompt: agent.systemPrompt });
+          }
         }
       }
 
@@ -266,6 +274,12 @@ export default function PRDBuilder() {
 
       if (deptCount > 0) {
         toast.success(t.dashboard.approvalSuccess(deptCount, agentCount));
+
+        // Auto-kickoff: send first tasks to all created agents (fire & forget)
+        const currentKey = apiKey || localStorage.getItem("anthropic_api_key") || "";
+        if (currentKey && createdAgents.length > 0) {
+          kickoffAgents(createdAgents, team.firstTasks || [], currentKey, lang as "ko" | "en");
+        }
       } else {
         toast.error(t.dashboard.approvalPartial);
       }
@@ -274,7 +288,11 @@ export default function PRDBuilder() {
     } catch (err) {
       console.error("Approval failed:", err);
       if (deptCount > 0) {
-        // Partial success
+        // Partial success — still kickoff what we created
+        const currentKey = apiKey || localStorage.getItem("anthropic_api_key") || "";
+        if (currentKey && createdAgents.length > 0) {
+          kickoffAgents(createdAgents, team.firstTasks || [], currentKey, lang as "ko" | "en");
+        }
         toast.warning(t.dashboard.approvalPartial);
         setTimeout(() => router.push("/dashboard"), 1500);
       } else {

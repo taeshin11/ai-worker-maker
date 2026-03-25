@@ -26,6 +26,24 @@ export function AgentStatusProvider({ children }: { children: React.ReactNode })
     } catch {}
   }, []);
 
+  // Poll localStorage for background kickoff updates (same-tab writes don't fire storage events)
+  useEffect(() => {
+    const interval = setInterval(() => {
+      try {
+        const stored = localStorage.getItem(STORAGE_KEY);
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          setStatusMap((prev) => {
+            const prevStr = JSON.stringify(prev);
+            const nextStr = JSON.stringify(parsed);
+            return prevStr !== nextStr ? parsed : prev;
+          });
+        }
+      } catch {}
+    }, 2000);
+    return () => clearInterval(interval);
+  }, []);
+
   function setAgentStatus(id: string, status: AgentStatus, snippet?: string) {
     setStatusMap((prev) => {
       const current: AgentStatusEntry = prev[id] ?? { status: "idle", snippet: "" };
