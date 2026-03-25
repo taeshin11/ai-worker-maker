@@ -261,7 +261,7 @@ export default function PRDBuilder() {
     (phase === "proposing" || phase === "approved") && team !== null && phase !== "approved";
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col flex-1 min-h-0">
       {/* Mobile tab bar */}
       <div className="flex sm:hidden border-b bg-background shrink-0">
         {(["chat", "charter"] as const).map((tab) => (
@@ -288,7 +288,7 @@ export default function PRDBuilder() {
           } sm:flex sm:w-[42%] bg-background`}
         >
           {/* Chat header */}
-          <div className="border-b px-4 py-3 shrink-0">
+          <div className="border-b px-4 pt-4 pb-3 shrink-0">
             <p className="font-semibold text-sm">{t.onboard.chatTitle}</p>
             <p className="text-xs text-muted-foreground capitalize">{phase}</p>
           </div>
@@ -366,7 +366,7 @@ export default function PRDBuilder() {
             activeTab === "chat" ? "hidden sm:block" : "block"
           }`}
         >
-          <div className="border-b px-4 py-3 bg-background hidden sm:block shrink-0">
+          <div className="border-b px-4 pt-4 pb-3 bg-background hidden sm:block shrink-0">
             <p className="font-semibold text-sm">{t.onboard.charterTitle}</p>
           </div>
           <CharterDoc charter={charter} phase={phase} team={team} />
