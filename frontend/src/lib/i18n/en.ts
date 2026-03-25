@@ -89,6 +89,10 @@ export type Dict = {
     proposedTeam: string;
     rationale: string;
     firstTasks: string;
+    phaseExploring: string;
+    phaseRefining: string;
+    phaseProposing: string;
+    phaseApproved: string;
   };
   auth: {
     welcome: string;
@@ -211,6 +215,10 @@ export const en: Dict = {
     proposedTeam: "Proposed Team",
     rationale: "Rationale",
     firstTasks: "First Tasks",
+    phaseExploring: "Exploring",
+    phaseRefining: "Refining",
+    phaseProposing: "Proposing",
+    phaseApproved: "Approved",
   },
 
   auth: {

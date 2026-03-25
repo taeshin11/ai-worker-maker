@@ -10,7 +10,7 @@ export async function POST(req: NextRequest) {
 
   const { messages, apiKey } = await req.json();
 
-  const resolvedKey = process.env.ANTHROPIC_API_KEY ?? apiKey;
+  const resolvedKey = apiKey || process.env.ANTHROPIC_API_KEY;
   if (!resolvedKey) {
     return new Response("No API key available. Add your key via the connection settings.", { status: 400 });
   }

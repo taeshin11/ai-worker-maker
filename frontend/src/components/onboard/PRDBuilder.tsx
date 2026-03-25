@@ -83,7 +83,7 @@ export default function PRDBuilder() {
     if (messages.length === 0) {
       const greeting =
         lang === "ko"
-          ? "안녕하세요! 저는 AI 워커 메이커의 Chief PM입니다. 여러분의 아이디어를 함께 다듬고 멋진 AI 팀을 구성해 드릴게요. 어떤 회사 또는 서비스를 만들고 싶으신가요?"
+          ? "안녕하세요! 저는 AI 워커 메이커의 수석 PM입니다. 여러분의 아이디어를 함께 다듬고 멋진 AI 팀을 구성해 드릴게요. 어떤 회사 또는 서비스를 만들고 싶으신가요?"
           : "Hi! I'm your Chief PM co-founder. I'll help you shape your company idea into a clear vision and build your AI team. What kind of company or product do you want to build?";
       setMessages([{ role: "assistant", content: greeting }]);
     }
@@ -120,7 +120,7 @@ export default function PRDBuilder() {
       window.dispatchEvent(new CustomEvent("open-api-key-modal", {
         detail: {
           interceptMessage: lang === "ko"
-            ? "Chief PM과 대화하려면 Anthropic API 키가 필요합니다. 아래에서 설정해 주세요."
+            ? "수석 PM과 대화하려면 Anthropic API 키가 필요합니다. 아래에서 설정해 주세요."
             : "To chat with your Chief PM, an Anthropic API key is required. Set it up below.",
         },
       }));
@@ -291,7 +291,12 @@ export default function PRDBuilder() {
           {/* 1. Chat Pane Header — PINNED (shrink-0) */}
           <div className="shrink-0 border-b px-4 py-3 z-10 bg-background">
             <p className="font-semibold text-sm">{t.onboard.chatTitle}</p>
-            <p className="text-xs text-muted-foreground capitalize">{phase}</p>
+            <p className="text-xs text-muted-foreground">
+              {phase === "exploring" ? t.onboard.phaseExploring
+                : phase === "refining" ? t.onboard.phaseRefining
+                : phase === "proposing" ? t.onboard.phaseProposing
+                : t.onboard.phaseApproved}
+            </p>
           </div>
 
           {/* 2. Message Area — ONLY this scrolls */}

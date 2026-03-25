@@ -4,9 +4,8 @@ import Anthropic from "@anthropic-ai/sdk";
 export async function POST(req: NextRequest) {
   const { messages, systemPrompt, apiKey } = await req.json();
 
-  // BYOK only: user supplies their own Anthropic API key.
-  // Server-side ANTHROPIC_API_KEY is used as a fallback for demos/testing only.
-  const resolvedKey: string | undefined = process.env.ANTHROPIC_API_KEY ?? apiKey;
+  // BYOK: user key first, server env var as fallback for demos
+  const resolvedKey: string | undefined = apiKey || process.env.ANTHROPIC_API_KEY;
   if (!resolvedKey) {
     return new Response("No API key provided. Add your Anthropic API key via the connection settings.", { status: 400 });
   }
