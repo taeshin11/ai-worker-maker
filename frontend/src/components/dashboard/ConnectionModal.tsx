@@ -5,6 +5,7 @@ import {
   KeyIcon, XIcon, ExternalLinkIcon, ShieldIcon,
   EyeIcon, EyeOffIcon, ChevronDownIcon, ChevronUpIcon,
   WifiIcon, WifiOffIcon, LoaderIcon, CheckCircleIcon,
+  AlertCircleIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -49,7 +50,7 @@ const STEPS_EN = [
   },
   {
     num: 4,
-    title: 'Copy the key and paste it below',
+    title: "Copy the key and paste it below",
     body: 'Your key starts with "sk-ant-". Copy it and paste it in the field below.',
   },
 ];
@@ -97,6 +98,7 @@ export default function ConnectionModal() {
   const { tier, setTier, localEndpoint, setLocalEndpoint, localModel, setLocalModel } = useTier();
   const { t, lang } = useT();
   const [open, setOpen] = useState(false);
+  const [interceptMessage, setInterceptMessage] = useState<string>("");
 
   const [keyValue, setKeyValue] = useState("");
   const [showKey, setShowKey] = useState(false);
@@ -105,19 +107,24 @@ export default function ConnectionModal() {
   const [modelValue, setModelValue] = useState(localModel);
   const [ping, setPing] = useState<PingState>("idle");
 
-  function handleOpen() {
+  function openModal(msg = "") {
     setKeyValue(apiKey);
     setEndpointValue(localEndpoint);
     setModelValue(localModel);
     setShowKey(false);
     setShowLocal(tier === "local");
     setPing("idle");
+    setInterceptMessage(msg);
     setOpen(true);
   }
 
   useEffect(() => {
-    window.addEventListener("open-api-key-modal", handleOpen);
-    return () => window.removeEventListener("open-api-key-modal", handleOpen);
+    function handleEvent(e: Event) {
+      const detail = (e as CustomEvent).detail;
+      openModal(detail?.interceptMessage ?? "");
+    }
+    window.addEventListener("open-api-key-modal", handleEvent);
+    return () => window.removeEventListener("open-api-key-modal", handleEvent);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tier, apiKey, localEndpoint, localModel]);
 
@@ -137,12 +144,21 @@ export default function ConnectionModal() {
       setApiKey(keyValue.trim());
     }
     setOpen(false);
+    setInterceptMessage("");
+    // Notify listeners (e.g. PRDBuilder) that a key was just saved
+    window.dispatchEvent(new CustomEvent("api-key-saved"));
   }
 
   function handleDisconnect() {
     setApiKey("");
     setTier("byok");
     setOpen(false);
+    setInterceptMessage("");
+  }
+
+  function handleClose() {
+    setOpen(false);
+    setInterceptMessage("");
   }
 
   const isConnected = (tier === "byok" && !!apiKey) || tier === "local";
@@ -155,15 +171,17 @@ export default function ConnectionModal() {
 
   return (
     <>
-      {/* Header trigger button */}
+      {/* ── Header trigger button ── */}
       <button
-        onClick={handleOpen}
-        className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm transition-colors hover:bg-muted"
+        onClick={() => openModal()}
+        className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm transition-colors ${
+          isConnected ? "hover:bg-muted" : "hover:bg-amber-50 dark:hover:bg-amber-950/30"
+        }`}
       >
         {isConnected ? (
           <>
-            <CheckCircleIcon className="size-4 text-emerald-500" />
-            <span className="hidden sm:inline text-emerald-600 font-medium text-xs">
+            <CheckCircleIcon className="size-4 text-emerald-500 shrink-0" />
+            <span className="hidden sm:inline text-emerald-600 dark:text-emerald-400 font-medium text-xs">
               {tier === "local"
                 ? (lang === "ko" ? "로컬 AI" : "Local AI")
                 : t.apiKey.connected}
@@ -171,9 +189,13 @@ export default function ConnectionModal() {
           </>
         ) : (
           <>
-            <KeyIcon className="size-4 text-amber-500" />
-            <span className="hidden sm:inline text-amber-600 font-medium text-xs">
-              {t.apiKey.addKey}
+            {/* Pulsing dot for attention */}
+            <span className="relative flex size-4 shrink-0 items-center justify-center">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-amber-400 opacity-50" />
+              <KeyIcon className="relative size-3.5 text-amber-600 dark:text-amber-400" />
+            </span>
+            <span className="hidden sm:inline text-amber-700 dark:text-amber-400 font-semibold text-xs">
+              {lang === "ko" ? "🔑 API 키 연결" : "🔑 Connect API Key"}
             </span>
           </>
         )}
@@ -183,8 +205,18 @@ export default function ConnectionModal() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4 py-8 backdrop-blur-sm">
           <div className="w-full max-w-md rounded-2xl bg-card ring-1 ring-foreground/10 shadow-2xl flex flex-col max-h-[90vh]">
 
+            {/* Intercept banner — shown when triggered by a blocked action */}
+            {interceptMessage && (
+              <div className="flex items-start gap-3 bg-amber-50 dark:bg-amber-950/30 border-b border-amber-200 dark:border-amber-800 px-5 py-3.5 rounded-t-2xl">
+                <AlertCircleIcon className="size-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+                <p className="text-sm text-amber-800 dark:text-amber-300 leading-snug">
+                  {interceptMessage}
+                </p>
+              </div>
+            )}
+
             {/* Header */}
-            <div className="flex items-start justify-between gap-4 px-6 pt-6 pb-4 shrink-0">
+            <div className="flex items-start justify-between gap-4 px-6 pt-5 pb-4 shrink-0">
               <div className="flex items-center gap-3">
                 <div className="flex size-9 items-center justify-center rounded-xl bg-primary/10 text-primary">
                   <KeyIcon className="size-4" />
@@ -201,7 +233,7 @@ export default function ConnectionModal() {
                 </div>
               </div>
               <button
-                onClick={() => setOpen(false)}
+                onClick={handleClose}
                 className="text-muted-foreground hover:text-foreground transition-colors mt-0.5 shrink-0"
               >
                 <XIcon className="size-4" />
@@ -215,17 +247,15 @@ export default function ConnectionModal() {
               <div className="flex flex-col gap-4">
                 {steps.map((step, i) => (
                   <div key={step.num} className="flex gap-3">
-                    {/* Step indicator */}
                     <div className="flex flex-col items-center shrink-0">
                       <div className="flex size-6 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs font-bold">
                         {step.num}
                       </div>
                       {i < steps.length - 1 && (
-                        <div className="w-px flex-1 bg-border mt-1.5 mb-0" style={{ minHeight: 16 }} />
+                        <div className="w-px flex-1 bg-border mt-1.5" style={{ minHeight: 16 }} />
                       )}
                     </div>
 
-                    {/* Step content */}
                     <div className="pb-4 flex-1 min-w-0">
                       <p className="text-sm font-semibold text-foreground leading-tight mb-1.5">
                         {step.title}
@@ -398,11 +428,13 @@ export default function ConnectionModal() {
                 <span />
               )}
               <div className="flex gap-2">
-                <Button variant="ghost" size="sm" onClick={() => setOpen(false)}>
+                <Button variant="ghost" size="sm" onClick={handleClose}>
                   {t.apiKey.cancel}
                 </Button>
                 <Button size="sm" onClick={handleSave} disabled={!canSave}>
-                  {t.apiKey.connect}
+                  {interceptMessage
+                    ? (lang === "ko" ? "저장 후 계속하기" : "Save & Continue")
+                    : t.apiKey.connect}
                 </Button>
               </div>
             </div>

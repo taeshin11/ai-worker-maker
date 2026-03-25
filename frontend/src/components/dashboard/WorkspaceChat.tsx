@@ -106,6 +106,7 @@ export default function WorkspaceChat() {
   const [loading, setLoading] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const pendingMessageRef = useRef<string>("");
 
   const selectedAgent: Agent | null =
     agents.find((a) => a.id === selectedAgentId) ?? null;
@@ -123,6 +124,25 @@ export default function WorkspaceChat() {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, loading]);
 
+  // Auto-send pending message after API key is saved via modal
+  useEffect(() => {
+    function onKeySaved() {
+      const pending = pendingMessageRef.current;
+      if (pending && selectedAgent) {
+        pendingMessageRef.current = "";
+        // Restore input briefly so user sees it, then submit
+        setInput(pending);
+        setTimeout(() => {
+          const form = document.getElementById("workspace-chat-form");
+          form?.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+        }, 50);
+      }
+    }
+    window.addEventListener("api-key-saved", onKeySaved);
+    return () => window.removeEventListener("api-key-saved", onKeySaved);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedAgent]);
+
   // Close drawer when clicking backdrop or after selecting on mobile
   function handleSelectAgent(id: string) {
     setSelectedAgentId(id);
@@ -132,7 +152,20 @@ export default function WorkspaceChat() {
 
   async function handleSend(e: React.FormEvent) {
     e.preventDefault();
-    if (!input.trim() || !selectedAgent || loading || !isReady) return;
+    if (!input.trim() || !selectedAgent || loading) return;
+
+    // Intercept: if BYOK key is missing, open the modal and preserve the message
+    if (tier === "byok" && !apiKey) {
+      pendingMessageRef.current = input.trim();
+      window.dispatchEvent(new CustomEvent("open-api-key-modal", {
+        detail: {
+          interceptMessage: lang === "ko"
+            ? `${selectedAgent.name}와(과) 대화하려면 Anthropic API 키가 필요합니다. 아래에서 설정해 주세요.`
+            : `To chat with ${selectedAgent.name}, an Anthropic API key is required. Set it up below.`,
+        },
+      }));
+      return;
+    }
 
     const userMsg: Message = { role: "user", content: input.trim() };
     const history = [...messages, userMsg];
@@ -396,7 +429,7 @@ export default function WorkspaceChat() {
 
         {/* Input */}
         <div className="border-t px-4 py-3 bg-background">
-          <form onSubmit={handleSend} className="flex gap-2 items-end">
+          <form id="workspace-chat-form" onSubmit={handleSend} className="flex gap-2 items-end">
             <Textarea
               placeholder={
                 !selectedAgent

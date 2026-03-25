@@ -39,6 +39,7 @@ export default function PRDBuilder() {
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const pendingMessageRef = useRef<string>("");
 
   // Load saved vision on mount
   useEffect(() => {
@@ -93,8 +94,37 @@ export default function PRDBuilder() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, streamingText]);
 
+  // Listen for api-key-saved and auto-send any pending message
+  useEffect(() => {
+    function onKeySaved() {
+      const pending = pendingMessageRef.current;
+      if (pending) {
+        pendingMessageRef.current = "";
+        sendMessage(pending);
+      }
+    }
+    window.addEventListener("api-key-saved", onKeySaved);
+    return () => window.removeEventListener("api-key-saved", onKeySaved);
+  // sendMessage is defined below — stable via useCallback not needed here
+  // because the effect only reads the ref and calls sendMessage once
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   async function sendMessage(text: string) {
     if (!text.trim() || loading) return;
+
+    // Intercept: if no key, open modal with context, preserve the message
+    if (!apiKey) {
+      pendingMessageRef.current = text;
+      window.dispatchEvent(new CustomEvent("open-api-key-modal", {
+        detail: {
+          interceptMessage: lang === "ko"
+            ? "수석 PM과 대화하려면 Anthropic API 키가 필요합니다. 아래에서 설정해 주세요."
+            : "To chat with your Chief PM, an Anthropic API key is required. Set it up below.",
+        },
+      }));
+      return;
+    }
 
     const userMsg: Msg = { role: "user", content: text };
     const nextMessages = [...messages, userMsg];

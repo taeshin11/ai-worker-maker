@@ -14,7 +14,8 @@
       "Bash(C:/supabase-cli/supabase.exe link:*)",
       "Bash(C:/supabase-cli/supabase.exe db:*)",
       "Bash(npx tsc:*)",
-      "Bash(npm run:*)"
+      "Bash(npm run:*)",
+      "Bash(git commit:*)"
     ]
   }
 }
