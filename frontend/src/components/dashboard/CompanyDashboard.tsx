@@ -170,7 +170,7 @@ export default function CompanyDashboard() {
                 </p>
                 <p className="text-xs text-muted-foreground mt-0.5">
                   {lang === "ko"
-                    ? "수석 PM과 대화하며 회사를 설계하세요"
+                    ? "Chief PM과 대화하며 회사를 설계하세요"
                     : "Chat with your Chief PM to shape your idea into a company"}
                 </p>
               </>

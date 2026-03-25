@@ -19,8 +19,6 @@ import { useT } from "@/lib/i18n/context";
 import { useAgentStatus } from "@/lib/agentStatus/context";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { toast } from "sonner";
-import { useTier } from "@/lib/useTier";
-import { streamLocalChat } from "@/lib/localChat";
 
 type Message = {
   role: "user" | "assistant";
@@ -94,10 +92,9 @@ export default function WorkspaceChat() {
   const { apiKey } = useApiKey();
   const { t, lang } = useT();
   const { statusMap, setAgentStatus } = useAgentStatus();
-  const { tier, localEndpoint, localModel } = useTier();
   const { departments, agents } = useCompanyData();
 
-  const isReady = (tier === "byok" && !!apiKey) || tier === "local";
+  const isReady = !!apiKey;
 
   const initialAgentId = searchParams.get("agent") ?? "";
   const [selectedAgentId, setSelectedAgentId] = useState(initialAgentId);
@@ -155,7 +152,7 @@ export default function WorkspaceChat() {
     if (!input.trim() || !selectedAgent || loading) return;
 
     // Intercept: if BYOK key is missing, open the modal and preserve the message
-    if (tier === "byok" && !apiKey) {
+    if (!apiKey) {
       pendingMessageRef.current = input.trim();
       window.dispatchEvent(new CustomEvent("open-api-key-modal", {
         detail: {
@@ -178,30 +175,7 @@ export default function WorkspaceChat() {
     const agentName = selectedAgent.name;
 
     try {
-      if (tier === "local") {
-        // ── Local: call Ollama directly from the browser ──
-        let text = "";
-        await streamLocalChat({
-          endpoint: localEndpoint,
-          model: localModel,
-          messages: history.map((m) => ({ role: m.role, content: m.content })),
-          systemPrompt: selectedAgent.systemPrompt,
-          onChunk: (chunk) => {
-            text += chunk;
-            setAgentStatus(agentId, "working", text.slice(0, 60));
-            setMessages((prev) => [
-              ...prev.slice(0, -1),
-              { role: "assistant", content: text },
-            ]);
-          },
-        });
-        setAgentStatus(agentId, "idle", text.slice(0, 60));
-        toast.success(
-          lang === "ko" ? `${agentName}이(가) 작업을 완료했습니다.` : `${agentName} finished a task.`,
-          { duration: 4000 }
-        );
-      } else {
-        // ── BYOK: proxy through /api/chat (key never stored server-side) ──
+      {
         const res = await fetch("/api/chat", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -265,7 +239,7 @@ export default function WorkspaceChat() {
   }
 
   return (
-    <div className="flex h-[calc(100vh-53px)] overflow-hidden">
+    <div className="flex h-full overflow-hidden">
 
       {/* ── Desktop sidebar (hidden on mobile) ── */}
       <aside className="hidden md:flex w-56 shrink-0 border-r flex-col">

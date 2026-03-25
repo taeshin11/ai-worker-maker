@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
-import { BotIcon, DownloadIcon } from "lucide-react";
+import { BotIcon } from "lucide-react";
 import SignOutButton from "@/components/dashboard/SignOutButton";
 import ConnectionModal from "@/components/dashboard/ConnectionModal";
 import NavLinks from "@/components/dashboard/NavLinks";
@@ -20,9 +20,12 @@ export default async function DashboardLayout({
   if (!user) redirect("/login");
 
   return (
-    <div className="flex min-h-screen flex-col">
-      <header className="sticky top-0 z-10 border-b bg-background/90 backdrop-blur-md shadow-sm">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-3">
+    <div style={{ height: "100vh", display: "flex", flexDirection: "column", overflow: "hidden" }}>
+      <header
+        style={{ height: 56, flexShrink: 0 }}
+        className="z-50 border-b bg-background w-full"
+      >
+        <div className="mx-auto flex h-full max-w-6xl items-center justify-between px-6">
           <div className="flex items-center gap-3 sm:gap-6">
             <Link href="/dashboard" className="flex items-center gap-2">
               <div className="flex size-7 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-sm">
@@ -33,20 +36,13 @@ export default async function DashboardLayout({
             <NavLinks />
           </div>
           <div className="flex items-center gap-3">
-            <Link
-              href="/download"
-              className="hidden sm:flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
-            >
-              <DownloadIcon className="size-3.5" />
-              Free Local
-            </Link>
             <LanguageToggle />
             <ConnectionModal />
             <SignOutButton />
           </div>
         </div>
       </header>
-      <main className="flex-1 flex flex-col min-h-0">{children}</main>
+      <main style={{ flex: 1, minHeight: 0, overflow: "hidden" }}>{children}</main>
     </div>
   );
 }

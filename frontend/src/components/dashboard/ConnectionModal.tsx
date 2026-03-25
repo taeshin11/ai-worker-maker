@@ -4,18 +4,13 @@ import { useState, useEffect } from "react";
 import {
   KeyIcon, XIcon, ExternalLinkIcon, ShieldIcon,
   EyeIcon, EyeOffIcon, ChevronDownIcon, ChevronUpIcon,
-  WifiIcon, WifiOffIcon, LoaderIcon, CheckCircleIcon,
-  AlertCircleIcon, HelpCircleIcon,
+  CheckCircleIcon, AlertCircleIcon, HelpCircleIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useApiKey } from "@/lib/useApiKey";
-import { useTier } from "@/lib/useTier";
-import { pingOllama } from "@/lib/localChat";
 import { useT } from "@/lib/i18n/context";
-
-type PingState = "idle" | "checking" | "ok" | "fail";
 
 const STEPS_EN = [
   {
@@ -101,30 +96,21 @@ const STEPS_KO = [
 
 export default function ConnectionModal() {
   const { apiKey, setApiKey } = useApiKey();
-  const { tier, setTier, localEndpoint, setLocalEndpoint, localModel, setLocalModel } = useTier();
   const { t, lang } = useT();
 
   const [open, setOpen] = useState(false);
   const [interceptMessage, setInterceptMessage] = useState("");
 
-  // Accordion / advanced toggles
+  // Accordion toggle
   const [guideOpen, setGuideOpen] = useState(false);
-  const [showLocal, setShowLocal] = useState(false);
 
   // Form state
   const [keyValue, setKeyValue] = useState("");
   const [showKey, setShowKey] = useState(false);
-  const [endpointValue, setEndpointValue] = useState(localEndpoint);
-  const [modelValue, setModelValue] = useState(localModel);
-  const [ping, setPing] = useState<PingState>("idle");
 
   function openModal(msg = "") {
     setKeyValue(apiKey);
-    setEndpointValue(localEndpoint);
-    setModelValue(localModel);
     setShowKey(false);
-    setShowLocal(tier === "local");
-    setPing("idle");
     setGuideOpen(false);
     setInterceptMessage(msg);
     setOpen(true);
@@ -138,23 +124,10 @@ export default function ConnectionModal() {
     window.addEventListener("open-api-key-modal", handleEvent);
     return () => window.removeEventListener("open-api-key-modal", handleEvent);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tier, apiKey, localEndpoint, localModel]);
-
-  async function handlePing() {
-    setPing("checking");
-    const ok = await pingOllama(endpointValue);
-    setPing(ok ? "ok" : "fail");
-  }
+  }, [apiKey]);
 
   function handleSave() {
-    if (showLocal && endpointValue.trim()) {
-      setTier("local");
-      setLocalEndpoint(endpointValue.trim());
-      setLocalModel(modelValue.trim());
-    } else {
-      setTier("byok");
-      setApiKey(keyValue.trim());
-    }
+    setApiKey(keyValue.trim());
     setOpen(false);
     setInterceptMessage("");
     window.dispatchEvent(new CustomEvent("api-key-saved"));
@@ -162,7 +135,6 @@ export default function ConnectionModal() {
 
   function handleDisconnect() {
     setApiKey("");
-    setTier("byok");
     setOpen(false);
     setInterceptMessage("");
   }
@@ -172,9 +144,9 @@ export default function ConnectionModal() {
     setInterceptMessage("");
   }
 
-  const isConnected = (tier === "byok" && !!apiKey) || tier === "local";
+  const isConnected = !!apiKey;
   const keyValid = keyValue.trim().startsWith("sk-ant-");
-  const canSave = showLocal ? endpointValue.trim().length > 0 : keyValid;
+  const canSave = keyValid;
 
   const steps = lang === "ko" ? STEPS_KO : STEPS_EN;
 
@@ -193,9 +165,7 @@ export default function ConnectionModal() {
           <>
             <CheckCircleIcon className="size-4 text-emerald-500 shrink-0" />
             <span className="hidden sm:inline text-emerald-600 dark:text-emerald-400 font-medium text-xs">
-              {tier === "local"
-                ? lang === "ko" ? "로컬 AI" : "Local AI"
-                : t.apiKey.connected}
+              {t.apiKey.connected}
             </span>
           </>
         ) : (
@@ -214,12 +184,6 @@ export default function ConnectionModal() {
       {/* ── Modal ── */}
       {open && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4 py-8 backdrop-blur-sm">
-          {/*
-            Three hard zones:
-              1. Sticky header  (shrink-0)
-              2. Scrollable middle — instructions accordion + local toggle  (flex-1 overflow-y-auto)
-              3. Pinned footer  — key input + security note + buttons  (shrink-0)
-          */}
           <div className="w-full max-w-md rounded-2xl bg-card ring-1 ring-foreground/10 shadow-2xl flex flex-col max-h-[85vh]">
 
             {/* ── Zone 1: Sticky header ── */}
@@ -258,7 +222,7 @@ export default function ConnectionModal() {
               </button>
             </div>
 
-            {/* ── Zone 2: Scrollable middle (accordion + local toggle) ── */}
+            {/* ── Zone 2: Scrollable middle (accordion) ── */}
             <div className="flex-1 overflow-y-auto px-6 min-h-0">
 
               {/* Guide accordion */}
@@ -339,84 +303,6 @@ export default function ConnectionModal() {
                         </div>
                       </div>
                     ))}
-                  </div>
-                )}
-              </div>
-
-              {/* Advanced: Local AI toggle */}
-              <div className="border-t pt-3 pb-4">
-                <button
-                  onClick={() => { setShowLocal((v) => !v); setPing("idle"); }}
-                  className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors font-medium"
-                >
-                  {showLocal
-                    ? <ChevronUpIcon className="size-3.5" />
-                    : <ChevronDownIcon className="size-3.5" />}
-                  {lang === "ko"
-                    ? "고급: 로컬 AI 사용 (Ollama)"
-                    : "Advanced: Use Local AI (Ollama)"}
-                </button>
-
-                {showLocal && (
-                  <div className="flex flex-col gap-3 mt-3">
-                    <div className="flex flex-col gap-1.5">
-                      <Label className="text-xs">
-                        {lang === "ko" ? "Ollama 주소" : "Ollama endpoint"}
-                      </Label>
-                      <Input
-                        value={endpointValue}
-                        onChange={(e) => { setEndpointValue(e.target.value); setPing("idle"); }}
-                        placeholder="http://localhost:11434"
-                        className="font-mono text-sm"
-                      />
-                    </div>
-                    <div className="flex flex-col gap-1.5">
-                      <Label className="text-xs">
-                        {lang === "ko" ? "모델 이름" : "Model name"}
-                      </Label>
-                      <Input
-                        value={modelValue}
-                        onChange={(e) => setModelValue(e.target.value)}
-                        placeholder="llama3.2"
-                        className="font-mono text-sm"
-                      />
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={handlePing}
-                        disabled={ping === "checking"}
-                        className="gap-1.5"
-                      >
-                        {ping === "checking"
-                          ? <LoaderIcon className="size-3.5 animate-spin" />
-                          : <WifiIcon className="size-3.5" />}
-                        {lang === "ko" ? "연결 테스트" : "Test connection"}
-                      </Button>
-                      {ping === "ok" && (
-                        <span className="flex items-center gap-1 text-xs text-emerald-600 font-medium">
-                          <WifiIcon className="size-3.5" />
-                          {lang === "ko" ? "연결됨" : "Connected"}
-                        </span>
-                      )}
-                      {ping === "fail" && (
-                        <span className="flex items-center gap-1 text-xs text-rose-600 font-medium">
-                          <WifiOffIcon className="size-3.5" />
-                          {lang === "ko" ? "연결 실패" : "Not reachable"}
-                        </span>
-                      )}
-                    </div>
-                    <a
-                      href="/download"
-                      target="_blank"
-                      className="text-xs text-primary font-medium hover:underline"
-                    >
-                      {lang === "ko"
-                        ? "AI Worker Helper 다운로드 →"
-                        : "Download AI Worker Helper →"}
-                    </a>
                   </div>
                 )}
               </div>

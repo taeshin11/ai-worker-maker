@@ -4,8 +4,7 @@ import Anthropic from "@anthropic-ai/sdk";
 export async function POST(req: NextRequest) {
   const { messages, systemPrompt, apiKey } = await req.json();
 
-  // Local tier is handled entirely client-side (direct Ollama call).
-  // This route is BYOK only: user supplies their own Anthropic API key.
+  // BYOK only: user supplies their own Anthropic API key.
   // Server-side ANTHROPIC_API_KEY is used as a fallback for demos/testing only.
   const resolvedKey: string | undefined = process.env.ANTHROPIC_API_KEY ?? apiKey;
   if (!resolvedKey) {
