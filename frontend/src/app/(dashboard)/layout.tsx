@@ -22,12 +22,12 @@ export default async function DashboardLayout({
     <div className="flex min-h-screen flex-col">
       <header className="sticky top-0 z-10 border-b bg-background/90 backdrop-blur-md shadow-sm">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-3">
-          <div className="flex items-center gap-6">
+          <div className="flex items-center gap-3 sm:gap-6">
             <Link href="/dashboard" className="flex items-center gap-2">
               <div className="flex size-7 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-sm">
                 <BotIcon className="size-4" />
               </div>
-              <span className="font-bold text-sm tracking-tight">AI Worker Maker</span>
+              <span className="hidden sm:inline font-bold text-sm tracking-tight">AI Worker Maker</span>
             </Link>
             <NavLinks />
           </div>
