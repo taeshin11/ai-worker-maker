@@ -8,6 +8,7 @@ import {
   UserIcon,
   KeyIcon,
   MenuIcon,
+  RefreshCwIcon,
   XIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -19,6 +20,7 @@ import { useT } from "@/lib/i18n/context";
 import { useAgentStatus } from "@/lib/agentStatus/context";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { toast } from "sonner";
+import { parseErrorCode, friendlyMessage } from "@/lib/friendlyError";
 
 type Message = {
   role: "user" | "assistant";
@@ -187,10 +189,12 @@ export default function WorkspaceChat() {
         });
 
         if (!res.ok || !res.body) {
-          const err = await res.text();
+          const body = await res.text();
+          const code = parseErrorCode(body);
+          const friendly = friendlyMessage(code, t);
           setMessages((prev) => [
             ...prev.slice(0, -1),
-            { role: "assistant", content: `Error: ${err}` },
+            { role: "assistant", content: `⚠️ ${friendly}` },
           ]);
           setAgentStatus(agentId, "idle");
           return;
@@ -211,6 +215,18 @@ export default function WorkspaceChat() {
           ]);
         }
 
+        // Check for error sentinel in stream
+        const streamError = parseErrorCode(text);
+        if (streamError) {
+          const friendly = friendlyMessage(streamError, t);
+          setMessages((prev) => [
+            ...prev.slice(0, -1),
+            { role: "assistant", content: `⚠️ ${friendly}` },
+          ]);
+          setAgentStatus(agentId, "idle");
+          return;
+        }
+
         setAgentStatus(agentId, "idle", text.slice(0, 60));
         toast.success(
           lang === "ko" ? `${agentName}이(가) 작업을 완료했습니다.` : `${agentName} finished a task.`,
@@ -218,12 +234,12 @@ export default function WorkspaceChat() {
         );
       }
     } catch (err) {
+      const errStr = err instanceof Error ? err.message : String(err);
+      const code = parseErrorCode(errStr);
+      const friendly = friendlyMessage(code, t);
       setMessages((prev) => [
         ...prev.slice(0, -1),
-        {
-          role: "assistant",
-          content: `Error: ${err instanceof Error ? err.message : "Unknown error"}`,
-        },
+        { role: "assistant", content: `⚠️ ${friendly}` },
       ]);
       setAgentStatus(agentId, "idle");
     } finally {

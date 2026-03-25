@@ -124,4 +124,14 @@ export const ko: Dict = {
     alreadyHave: "이미 계정이 있으신가요?",
     creatingAccount: "계정 생성 중…",
   },
+
+  errors: {
+    overloaded: "현재 AI 서버에 접속자가 많아 답변이 지연되고 있습니다. 잠시 후 다시 시도해 주세요.",
+    rate_limit: "요청이 너무 많습니다. 잠시 후 다시 시도해 주세요.",
+    invalid_key: "API 키가 유효하지 않거나 만료되었습니다. 연결 설정에서 키를 확인해 주세요.",
+    no_key: "API 키가 없습니다. 먼저 Anthropic API 키를 등록해 주세요.",
+    api_error: "AI 서비스에 문제가 발생했습니다. 다시 시도해 주세요.",
+    unknown: "예상치 못한 오류가 발생했습니다. 다시 시도해 주세요.",
+    retry: "다시 시도",
+  },
 };

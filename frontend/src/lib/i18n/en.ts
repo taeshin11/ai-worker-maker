@@ -94,6 +94,15 @@ export type Dict = {
     phaseProposing: string;
     phaseApproved: string;
   };
+  errors: {
+    overloaded: string;
+    rate_limit: string;
+    invalid_key: string;
+    no_key: string;
+    api_error: string;
+    unknown: string;
+    retry: string;
+  };
   auth: {
     welcome: string;
     signInTo: string;
@@ -236,5 +245,15 @@ export const en: Dict = {
     fullName: "Full name",
     alreadyHave: "Already have an account?",
     creatingAccount: "Creating account…",
+  },
+
+  errors: {
+    overloaded: "The AI server is currently busy. Please try again in a moment.",
+    rate_limit: "Too many requests. Please wait a moment and try again.",
+    invalid_key: "Your API key is invalid or expired. Please check your key in the connection settings.",
+    no_key: "No API key found. Please add your Anthropic API key first.",
+    api_error: "Something went wrong with the AI service. Please try again.",
+    unknown: "An unexpected error occurred. Please try again.",
+    retry: "Retry",
   },
 };

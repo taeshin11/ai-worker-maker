@@ -2,12 +2,13 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { SendIcon, LoaderIcon } from "lucide-react";
+import { SendIcon, LoaderIcon, RefreshCwIcon } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { useT } from "@/lib/i18n/context";
 import { useApiKey } from "@/lib/useApiKey";
 import { useCompanyData } from "@/lib/useCompanyData";
+import { parseErrorCode, friendlyMessage } from "@/lib/friendlyError";
 import {
   parsePMResponse,
   EMPTY_CHARTER,
@@ -148,7 +149,12 @@ export default function PRDBuilder() {
       });
 
       if (!res.ok || !res.body) {
-        throw new Error(await res.text());
+        const body = await res.text();
+        const code = parseErrorCode(body);
+        const friendly = friendlyMessage(code, t);
+        setMessages((prev) => [...prev, { role: "assistant", content: `⚠️ ${friendly}` }]);
+        setStreamingText("");
+        return;
       }
 
       const reader = res.body.getReader();
@@ -160,6 +166,20 @@ export default function PRDBuilder() {
         if (done) break;
         raw += decoder.decode(value, { stream: true });
         setStreamingText(raw);
+      }
+
+      // Check for error sentinel in stream
+      const streamError = parseErrorCode(raw);
+      if (streamError) {
+        const friendly = friendlyMessage(streamError, t);
+        const cleanRaw = raw.replace(/__ERROR__:\w+/, "").trim();
+        setMessages((prev) => [
+          ...prev,
+          ...(cleanRaw ? [{ role: "assistant" as const, content: cleanRaw }] : []),
+          { role: "assistant", content: `⚠️ ${friendly}` },
+        ]);
+        setStreamingText("");
+        return;
       }
 
       // Parse final response
@@ -185,14 +205,11 @@ export default function PRDBuilder() {
           body: JSON.stringify({ ...EMPTY_CHARTER, ...charter, ...parsed.charter, status: "draft" }),
         }).catch(() => {});
       }
-
-      // Switch to charter tab on mobile when content appears
-      if (activeTab === "chat" && parsed.charter.title) {
-        // don't auto-switch — user can tap the tab
-      }
     } catch (err) {
-      const msg = err instanceof Error ? err.message : "Unknown error";
-      toast.error(msg);
+      const errStr = err instanceof Error ? err.message : String(err);
+      const code = parseErrorCode(errStr);
+      const friendly = friendlyMessage(code, t);
+      setMessages((prev) => [...prev, { role: "assistant", content: `⚠️ ${friendly}` }]);
       setStreamingText("");
     } finally {
       setLoading(false);
@@ -301,9 +318,35 @@ export default function PRDBuilder() {
 
           {/* 2. Message Area — ONLY this scrolls */}
           <div ref={messagesContainerRef} className="flex-1 overflow-y-auto p-4 flex flex-col gap-3">
-            {messages.map((msg, i) => (
-              <Bubble key={i} role={msg.role} content={msg.content} />
-            ))}
+            {messages.map((msg, i) => {
+              const isLastError =
+                msg.role === "assistant" &&
+                msg.content.startsWith("⚠️") &&
+                i === messages.length - 1;
+              return (
+                <Bubble
+                  key={i}
+                  role={msg.role}
+                  content={msg.content}
+                  onRetry={
+                    isLastError
+                      ? () => {
+                          // Find the last user message and resend
+                          const lastUserMsg = [...messages]
+                            .reverse()
+                            .find((m) => m.role === "user");
+                          if (lastUserMsg) {
+                            // Remove the error message
+                            setMessages((prev) => prev.filter((_, idx) => idx !== i));
+                            sendMessage(lastUserMsg.content);
+                          }
+                        }
+                      : undefined
+                  }
+                  retryLabel={isLastError ? t.errors.retry : undefined}
+                />
+              );
+            })}
 
             {streamingText && (
               <Bubble
@@ -384,17 +427,24 @@ function Bubble({
   role,
   content,
   streaming,
+  onRetry,
+  retryLabel,
 }: {
   role: "user" | "assistant";
   content: string;
   streaming?: boolean;
+  onRetry?: () => void;
+  retryLabel?: string;
 }) {
   const isUser = role === "user";
+  const isError = !isUser && content.startsWith("⚠️");
   return (
     <div className={`flex ${isUser ? "justify-end" : "justify-start"}`}>
       <div
         className={`max-w-[85%] rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed ${
-          isUser
+          isError
+            ? "bg-amber-100 dark:bg-amber-950/40 text-amber-900 dark:text-amber-200 rounded-bl-sm"
+            : isUser
             ? "bg-primary text-primary-foreground rounded-br-sm"
             : "bg-muted text-foreground rounded-bl-sm"
         } ${streaming ? "opacity-80" : ""}`}
@@ -402,6 +452,15 @@ function Bubble({
         {content}
         {streaming && (
           <span className="inline-block w-1 h-3.5 ml-0.5 bg-current animate-pulse rounded-sm align-text-bottom" />
+        )}
+        {isError && onRetry && (
+          <button
+            onClick={onRetry}
+            className="mt-2 flex items-center gap-1.5 text-xs font-medium text-amber-700 dark:text-amber-300 hover:underline"
+          >
+            <RefreshCwIcon className="size-3" />
+            {retryLabel ?? "Retry"}
+          </button>
         )}
       </div>
     </div>
