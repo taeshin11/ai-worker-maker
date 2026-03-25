@@ -9,6 +9,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 
+const DEMO_EMAIL = process.env.NEXT_PUBLIC_DEMO_EMAIL;
+const DEMO_PASSWORD = process.env.NEXT_PUBLIC_DEMO_PASSWORD;
+
 export default function LoginForm() {
   const router = useRouter();
   const [email, setEmail] = useState("");
@@ -16,22 +19,28 @@ export default function LoginForm() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  async function handleSubmit(e: React.SubmitEvent<HTMLFormElement>) {
-    e.preventDefault();
+  async function signIn(e: string, p: string) {
     setLoading(true);
     setError(null);
-
     const supabase = createClient();
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-
+    const { error } = await supabase.auth.signInWithPassword({ email: e, password: p });
     if (error) {
       setError(error.message);
       setLoading(false);
       return;
     }
-
     router.push("/dashboard");
     router.refresh();
+  }
+
+  async function handleSubmit(e: React.SubmitEvent<HTMLFormElement>) {
+    e.preventDefault();
+    await signIn(email, password);
+  }
+
+  async function handleDemo() {
+    if (!DEMO_EMAIL || !DEMO_PASSWORD) return;
+    await signIn(DEMO_EMAIL, DEMO_PASSWORD);
   }
 
   return (
@@ -70,6 +79,17 @@ export default function LoginForm() {
           <Button type="submit" className="w-full" disabled={loading}>
             {loading ? "Signing in…" : "Sign in"}
           </Button>
+          {DEMO_EMAIL && DEMO_PASSWORD && (
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full"
+              disabled={loading}
+              onClick={handleDemo}
+            >
+              Demo Account
+            </Button>
+          )}
           <p className="text-sm text-muted-foreground text-center">
             No account?{" "}
             <Link href="/signup" className="text-foreground underline underline-offset-4">
