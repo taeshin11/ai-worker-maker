@@ -40,6 +40,10 @@ export default function LoginForm() {
 
   async function handleDemo() {
     if (!DEMO_EMAIL || !DEMO_PASSWORD) return;
+    setEmail(DEMO_EMAIL);
+    setPassword(DEMO_PASSWORD);
+    // Small delay so the user sees the fields fill in before submitting
+    await new Promise((r) => setTimeout(r, 600));
     await signIn(DEMO_EMAIL, DEMO_PASSWORD);
   }
 
