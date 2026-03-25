@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { EyeIcon, EyeOffIcon } from "lucide-react";
+import { EyeIcon, EyeOffIcon, GlobeIcon } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,7 +16,7 @@ const DEMO_PASSWORD = process.env.NEXT_PUBLIC_DEMO_PASSWORD;
 
 export default function LoginForm() {
   const router = useRouter();
-  const { t } = useT();
+  const { t, lang, setLang } = useT();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -117,6 +117,24 @@ export default function LoginForm() {
           </p>
         </CardFooter>
       </form>
+      <div className="flex justify-center pt-3 pb-1">
+        <div className="flex items-center gap-0.5 rounded-lg border bg-muted/50 p-0.5">
+          <GlobeIcon className="size-3.5 text-muted-foreground ml-1.5 shrink-0" />
+          {(["en", "ko"] as const).map((code) => (
+            <button
+              key={code}
+              onClick={() => setLang(code)}
+              className={`rounded-md px-2 py-1 text-xs font-medium transition-colors ${
+                lang === code
+                  ? "bg-background text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              {code === "en" ? "EN" : "한국어"}
+            </button>
+          ))}
+        </div>
+      </div>
     </Card>
   );
 }

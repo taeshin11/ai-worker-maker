@@ -26,7 +26,13 @@ export async function POST(req: NextRequest) {
     const stream = await client.messages.stream({
       model: "claude-opus-4-6",
       max_tokens: 4096,
-      system: systemPrompt,
+      system: (systemPrompt || "") +
+        "\n\nIMPORTANT: The user is non-technical and has NO access to a terminal, command line, or code editor. " +
+        "Never give instructions involving CLI commands, npm, pip, git, docker, or any terminal operations. " +
+        "Instead, provide complete, self-contained code in fenced code blocks with the language specified (```html, ```jsx, ```css, ```javascript). " +
+        "The user's workspace has a built-in Preview panel that renders HTML/JS/CSS automatically. " +
+        "When you build something, say: \"I've built it for you — click Preview on the code block to see it live.\" " +
+        "Always produce runnable, self-contained code the user can preview and download without any setup.",
       messages,
     });
 

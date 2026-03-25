@@ -59,6 +59,18 @@ export const ko: Dict = {
     chatWith: (name: string) => `${name}와 대화`,
     rolePlaceholder: (dept: string) =>
       `나는 ${dept} 전문가입니다. 다음과 같은 업무를 도와드립니다…`,
+    visionView: "비전 보기 및 편집",
+    visionDefine: "회사 비전 정의하기",
+    visionDefineDesc: "수석 PM과 대화하며 회사를 설계하세요",
+    visionApproved: "승인됨",
+    visionDraft: "초안",
+    visionStart: "시작하기",
+    deleteDept: "부서 삭제",
+    deleteDeptConfirm: (name: string) => `"${name}" 부서와 소속 직원을 모두 삭제할까요?`,
+    deleteAgentConfirm: (name: string) => `"${name}" 직원을 삭제할까요?`,
+    editRole: "역할 수정",
+    editRolePlaceholder: "이 AI 직원의 역할을 설명하세요…",
+    save: "저장",
   },
 
   workspace: {
@@ -77,6 +89,18 @@ export const ko: Dict = {
     placeholderNoAgent: "먼저 AI 직원을 선택하세요…",
     placeholderNoKey: "API 키를 등록해야 대화할 수 있어요…",
     messagePlaceholder: (name: string) => `${name}에게 메시지 보내기…`,
+    clearChat: "대화 기록 삭제",
+    taskDone: (name: string) => `${name}이(가) 작업을 완료했습니다.`,
+    interceptNoKey: (name: string) =>
+      `${name}와(과) 대화하려면 Anthropic API 키가 필요합니다. 아래에서 설정해 주세요.`,
+    preview: "미리보기",
+    closePreview: "미리보기 닫기",
+    downloadFile: "다운로드",
+    saveToGithub: "GitHub에 저장",
+    githubComingSoon: "GitHub 내보내기 기능이 곧 추가됩니다!",
+    copyCode: "코드 복사",
+    codeCopied: "복사됨!",
+    codePreview: "코드 미리보기",
   },
 
   onboard: {
@@ -123,6 +147,10 @@ export const ko: Dict = {
     fullName: "이름",
     alreadyHave: "이미 계정이 있으신가요?",
     creatingAccount: "계정 생성 중…",
+    checkEmail: "이메일을 확인하세요",
+    checkEmailDesc: (email: string) =>
+      `${email}로 확인 링크를 보냈습니다. 클릭하면 계정이 활성화됩니다.`,
+    backToSignIn: "로그인으로 돌아가기",
   },
 
   errors: {

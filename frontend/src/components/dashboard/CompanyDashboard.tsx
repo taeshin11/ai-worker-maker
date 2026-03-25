@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { PlusIcon, MessageSquareIcon, BuildingIcon, SparklesIcon, TrashIcon, LoaderIcon, LightbulbIcon } from "lucide-react";
+import { PlusIcon, MessageSquareIcon, BuildingIcon, SparklesIcon, TrashIcon, LoaderIcon, LightbulbIcon, PencilIcon, CheckIcon, XIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -15,6 +15,7 @@ import {
   CardContent,
   CardFooter,
 } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useCompanyData } from "@/lib/useCompanyData";
 import { useT } from "@/lib/i18n/context";
 import { useAgentStatus } from "@/lib/agentStatus/context";
@@ -57,7 +58,7 @@ export default function CompanyDashboard() {
   const { statusMap } = useAgentStatus();
   const {
     departments, agents, loading,
-    addDepartment, deleteDepartment, addAgent, deleteAgent,
+    addDepartment, deleteDepartment, addAgent, updateAgent, deleteAgent,
   } = useCompanyData();
 
   const [vision, setVision] = useState<{ title: string; tagline: string; status: string } | null>(null);
@@ -76,6 +77,22 @@ export default function CompanyDashboard() {
   const [hiringInDept, setHiringInDept] = useState<string | null>(null);
   const [agentName, setAgentName] = useState("");
   const [agentPrompt, setAgentPrompt] = useState("");
+  const [editingAgentId, setEditingAgentId] = useState<string | null>(null);
+  const [editPrompt, setEditPrompt] = useState("");
+  const [editSaving, setEditSaving] = useState(false);
+
+  function startEditAgent(agent: { id: string; systemPrompt: string }) {
+    setEditingAgentId(agent.id);
+    setEditPrompt(agent.systemPrompt);
+  }
+
+  async function saveEditAgent() {
+    if (!editingAgentId || editSaving) return;
+    setEditSaving(true);
+    await updateAgent(editingAgentId, { systemPrompt: editPrompt });
+    setEditingAgentId(null);
+    setEditSaving(false);
+  }
 
   async function handleAddDepartment(e: React.FormEvent) {
     e.preventDefault();
@@ -111,15 +128,37 @@ export default function CompanyDashboard() {
 
   if (loading) {
     return (
-      <div className="flex min-h-[60vh] items-center justify-center gap-3 text-muted-foreground">
-        <LoaderIcon className="size-5 animate-spin" />
-        <span className="text-sm">{lang === "ko" ? "불러오는 중…" : "Loading…"}</span>
+      <div className="h-full overflow-y-auto bg-muted/30">
+        <div className="border-b bg-background">
+          <div className="mx-auto max-w-6xl px-6 py-8">
+            <Skeleton className="h-8 w-48" />
+            <Skeleton className="h-4 w-32 mt-2" />
+          </div>
+        </div>
+        <div className="mx-auto max-w-6xl px-6 py-8">
+          <Skeleton className="h-16 w-full rounded-xl mb-6" />
+          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="rounded-xl bg-card ring-1 ring-foreground/8 p-5 space-y-3">
+                <div className="flex items-center gap-3">
+                  <Skeleton className="size-10 rounded-xl" />
+                  <div className="space-y-1.5 flex-1">
+                    <Skeleton className="h-4 w-24" />
+                    <Skeleton className="h-3 w-16" />
+                  </div>
+                </div>
+                <Skeleton className="h-8 w-full" />
+                <Skeleton className="h-8 w-full" />
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-full bg-muted/30">
+    <div className="h-full overflow-y-auto bg-muted/30">
       {/* Page header */}
       <div className="border-b bg-background">
         <div className="mx-auto max-w-6xl px-6 py-8">
@@ -160,18 +199,16 @@ export default function CompanyDashboard() {
               <>
                 <p className="font-semibold text-sm truncate">{vision.title}</p>
                 <p className="text-xs text-muted-foreground truncate mt-0.5">
-                  {vision.tagline || (lang === "ko" ? "비전 보기 및 편집" : "View & edit your vision")}
+                  {vision.tagline || t.dashboard.visionView}
                 </p>
               </>
             ) : (
               <>
                 <p className="font-semibold text-sm">
-                  {lang === "ko" ? "회사 비전 정의하기" : "Define Your Company Vision"}
+                  {t.dashboard.visionDefine}
                 </p>
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  {lang === "ko"
-                    ? "수석 PM과 대화하며 회사를 설계하세요"
-                    : "Chat with your Chief PM to shape your idea into a company"}
+                  {t.dashboard.visionDefineDesc}
                 </p>
               </>
             )}
@@ -182,10 +219,10 @@ export default function CompanyDashboard() {
               : "bg-primary/10 text-primary"
           }`}>
             {vision?.status === "approved"
-              ? (lang === "ko" ? "승인됨" : "Approved")
+              ? t.dashboard.visionApproved
               : vision?.title
-              ? (lang === "ko" ? "초안" : "Draft")
-              : (lang === "ko" ? "시작하기 →" : "Get started →")}
+              ? t.dashboard.visionDraft
+              : `${t.dashboard.visionStart} →`}
           </span>
         </button>
 
@@ -261,9 +298,11 @@ export default function CompanyDashboard() {
                       </span>
                     </div>
                     <button
-                      onClick={() => deleteDepartment(dept.id)}
+                      onClick={() => {
+                        if (window.confirm(t.dashboard.deleteDeptConfirm(dept.name))) deleteDepartment(dept.id);
+                      }}
                       className="shrink-0 p-1 rounded-lg text-muted-foreground/50 hover:text-destructive hover:bg-destructive/10 transition-colors opacity-0 group-hover:opacity-100"
-                      title={lang === "ko" ? "부서 삭제" : "Delete department"}
+                      title={t.dashboard.deleteDept}
                     >
                       <TrashIcon className="size-3.5" />
                     </button>
@@ -281,44 +320,86 @@ export default function CompanyDashboard() {
                           const entry = statusMap[agent.id];
                           const status = entry?.status ?? "idle";
                           const snippet = entry?.snippet ?? "";
+                          const isEditing = editingAgentId === agent.id;
                           return (
-                            <li
-                              key={agent.id}
-                              className="flex items-center justify-between gap-2 rounded-lg px-2 py-1.5 hover:bg-muted/60 transition-colors"
-                            >
-                              <div className="flex items-center gap-2.5 min-w-0">
-                                <span className={`flex size-7 shrink-0 items-center justify-center rounded-full text-xs font-bold ${AGENT_COLORS[agentIdx % AGENT_COLORS.length]}`}>
-                                  {agent.name.slice(0, 2).toUpperCase()}
-                                </span>
-                                <div className="min-w-0">
-                                  <div className="flex items-center gap-1.5">
-                                    <p className="text-sm font-medium truncate">{agent.name}</p>
-                                    <StatusBadge status={status} lang={lang} />
+                            <li key={agent.id} className="rounded-lg hover:bg-muted/60 transition-colors">
+                              <div className="flex items-center justify-between gap-2 px-2 py-1.5">
+                                <div className="flex items-center gap-2.5 min-w-0">
+                                  <span className={`flex size-7 shrink-0 items-center justify-center rounded-full text-xs font-bold ${AGENT_COLORS[agentIdx % AGENT_COLORS.length]}`}>
+                                    {agent.name.slice(0, 2).toUpperCase()}
+                                  </span>
+                                  <div className="min-w-0">
+                                    <div className="flex items-center gap-1.5">
+                                      <p className="text-sm font-medium truncate">{agent.name}</p>
+                                      <StatusBadge status={status} lang={lang} />
+                                    </div>
+                                    {snippet && (
+                                      <p className="text-xs text-muted-foreground truncate max-w-[160px]">
+                                        {status === "working" ? snippet : `↩ ${snippet}`}…
+                                      </p>
+                                    )}
                                   </div>
-                                  {snippet && (
-                                    <p className="text-xs text-muted-foreground truncate max-w-[160px]">
-                                      {status === "working" ? snippet : `↩ ${snippet}`}…
-                                    </p>
-                                  )}
+                                </div>
+                                <div className="flex items-center gap-1 shrink-0">
+                                  <button
+                                    title={t.dashboard.editRole}
+                                    onClick={() => isEditing ? setEditingAgentId(null) : startEditAgent(agent)}
+                                    className={`p-1 rounded transition-colors ${isEditing ? "text-primary bg-primary/10" : "text-muted-foreground/40 hover:text-primary hover:bg-primary/10"}`}
+                                  >
+                                    <PencilIcon className="size-3" />
+                                  </button>
+                                  <button
+                                    title={t.dashboard.chatWith(agent.name)}
+                                    onClick={() => router.push(`/workspace?agent=${agent.id}`)}
+                                    className="flex items-center gap-1 text-xs text-primary font-medium hover:underline"
+                                  >
+                                    <MessageSquareIcon className="size-3.5" />
+                                    {t.dashboard.chat}
+                                  </button>
+                                  <button
+                                    onClick={() => {
+                                      if (window.confirm(t.dashboard.deleteAgentConfirm(agent.name))) deleteAgent(agent.id);
+                                    }}
+                                    className="p-1 rounded text-muted-foreground/40 hover:text-destructive hover:bg-destructive/10 transition-colors"
+                                    title={t.dashboard.deleteDept}
+                                  >
+                                    <TrashIcon className="size-3" />
+                                  </button>
                                 </div>
                               </div>
-                              <div className="flex items-center gap-1 shrink-0">
-                                <button
-                                  title={t.dashboard.chatWith(agent.name)}
-                                  onClick={() => router.push(`/workspace?agent=${agent.id}`)}
-                                  className="flex items-center gap-1 text-xs text-primary font-medium hover:underline"
-                                >
-                                  <MessageSquareIcon className="size-3.5" />
-                                  {t.dashboard.chat}
-                                </button>
-                                <button
-                                  onClick={() => deleteAgent(agent.id)}
-                                  className="p-1 rounded text-muted-foreground/40 hover:text-destructive hover:bg-destructive/10 transition-colors"
-                                  title={lang === "ko" ? "삭제" : "Delete"}
-                                >
-                                  <TrashIcon className="size-3" />
-                                </button>
-                              </div>
+                              {/* Inline system prompt editor */}
+                              {isEditing && (
+                                <div className="px-2 pb-2 pt-1">
+                                  <Textarea
+                                    value={editPrompt}
+                                    onChange={(e) => setEditPrompt(e.target.value)}
+                                    rows={3}
+                                    className="text-xs resize-none"
+                                    placeholder={t.dashboard.editRolePlaceholder}
+                                    autoFocus
+                                  />
+                                  <div className="flex gap-1.5 mt-1.5">
+                                    <Button
+                                      size="sm"
+                                      className="h-7 text-xs gap-1"
+                                      onClick={saveEditAgent}
+                                      disabled={editSaving}
+                                    >
+                                      {editSaving ? <LoaderIcon className="size-3 animate-spin" /> : <CheckIcon className="size-3" />}
+                                      {t.dashboard.save}
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      variant="ghost"
+                                      className="h-7 text-xs gap-1"
+                                      onClick={() => setEditingAgentId(null)}
+                                    >
+                                      <XIcon className="size-3" />
+                                      {t.dashboard.cancel}
+                                    </Button>
+                                  </div>
+                                </div>
+                              )}
                             </li>
                           );
                         })}

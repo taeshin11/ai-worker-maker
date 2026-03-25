@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { SendIcon, LoaderIcon, RefreshCwIcon } from "lucide-react";
+import Markdown from "react-markdown";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { useT } from "@/lib/i18n/context";
@@ -445,11 +446,11 @@ function Bubble({
           isError
             ? "bg-amber-100 dark:bg-amber-950/40 text-amber-900 dark:text-amber-200 rounded-bl-sm"
             : isUser
-            ? "bg-primary text-primary-foreground rounded-br-sm"
-            : "bg-muted text-foreground rounded-bl-sm"
+            ? "bg-primary text-primary-foreground rounded-br-sm whitespace-pre-wrap"
+            : "bg-muted text-foreground rounded-bl-sm prose prose-sm prose-neutral dark:prose-invert max-w-none [&>*:first-child]:mt-0 [&>*:last-child]:mb-0"
         } ${streaming ? "opacity-80" : ""}`}
       >
-        {content}
+        {isUser ? content : <Markdown>{content}</Markdown>}
         {streaming && (
           <span className="inline-block w-1 h-3.5 ml-0.5 bg-current animate-pulse rounded-sm align-text-bottom" />
         )}

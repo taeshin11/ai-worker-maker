@@ -25,11 +25,7 @@
 - ❌ No `subscriptions`, `usage_events`, or `credits` database tables
 - ❌ No "Cloud Plan" that uses a shared master API key for paying users
 - ❌ No usage metering or rate limiting per user
-
-### Optional: Local AI (Advanced Users)
-Power users who have installed the AI Worker Helper desktop app (`AI_Worker_Helper.exe`) can switch to a local Ollama endpoint (`localhost:11434`) instead of using Anthropic. This remains a free, self-serve option. No billing is involved.
-- **Pre-Download Hardware Check:** Before downloading, a "Hardware Check" modal uses WebGL to detect the user's GPU/VRAM. If hardware is insufficient, local mode is disabled and the user is guided to use BYOK instead.
-- **Execution:** The `.exe` installs Ollama and a GGUF model scaled to detected hardware. It exposes `localhost:11434` with CORS enabled. No `vLLM`.
+- ❌ No Local AI / Ollama / Desktop Helper App — BYOK Anthropic API only
 
 ## 4. BYOK Onboarding: Idiot-Proof API Key Setup (Critical UX)
 
@@ -46,12 +42,9 @@ The Connection Modal must display a numbered, visual step-by-step guide before t
 | 4 | Click "API Keys" → "Create Key" | Plain text with GIF placeholder `[GIF: Creating a key]` |
 | 5 | Copy the key starting with `sk-ant-...` and paste below | Input field with eye toggle |
 
-**Security note (mandatory):** Displayed below the input — "🔒 Your key is saved only in this browser. It is never sent to our servers."
+**Security note (mandatory):** Displayed below the input — "Your key is saved only in this browser. It is never sent to our servers."
 
 **Validation:** The save button is disabled until the input starts with `sk-ant-`.
-
-### Advanced Mode (Ollama)
-A collapsed "Use Local AI instead" toggle at the bottom of the modal reveals the Ollama endpoint and model fields with a ping-test button.
 
 ## 5. Core Features
 
@@ -71,11 +64,23 @@ Interactive split-pane Chief PM chat. Left pane: streaming conversation with the
 ### Task Workspace (/workspace)
 Full-screen chat with a selected AI agent. Real-time streaming. Auto-scroll. Agent list in sidebar (desktop) or hamburger drawer (mobile).
 
+#### Code Preview & Artifact System (No-CLI Rule)
+Because our users are non-technical, agents must **never** give CLI/terminal instructions. Instead:
+
+- **Live Preview Panel:** When an agent generates code (HTML, CSS, JS, JSX), a "Preview" button appears below the code block. Clicking it opens a right-side iframe sandbox (`sandbox="allow-scripts"`, `srcdoc`) that renders the code live in the browser. On mobile, the preview opens as a fullscreen overlay.
+- **1-Click Export:** Every code block shows action buttons:
+  - **Preview** — opens the live preview panel
+  - **Download** — triggers a browser download of the code file
+  - **Copy Code** — copies to clipboard
+  - **Save to GitHub** — placeholder button for future OAuth-based GitHub integration (no terminal)
+- **Agent Tone Directive:** All agent system prompts are appended with a server-side directive that forbids CLI instructions and instructs the agent to provide self-contained, previewable code with guidance like "Click Preview to see it live."
+- **Supported Languages:** HTML, CSS, JavaScript, JSX/TSX (via Babel standalone + React UMD), SVG. Plain JS output is wrapped with a console.log capture display.
+
 ## 6. Tech Stack
 - **Frontend:** Next.js (App Router), TailwindCSS, shadcn/ui.
 - **Backend:** Next.js API Routes (secure proxy — never persists API keys).
 - **Database & Auth:** Supabase (PostgreSQL + RLS). Tables: `company_visions`, `departments`, `agents`. No billing tables.
-- **AI:** Anthropic Claude API (user-supplied key) or Ollama (local, optional).
+- **AI:** Anthropic Claude API (user-supplied BYOK key only).
 
 ## 7. Internationalization (i18n)
 Full EN/KO support via React Context. Language auto-detected from `navigator.language`, persisted in `localStorage`. All UI strings defined in `en.ts` (Dict interface) and `ko.ts`.

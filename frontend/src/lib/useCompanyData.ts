@@ -79,6 +79,25 @@ export function useCompanyData() {
     return agent;
   }
 
+  async function updateAgent(
+    id: string,
+    updates: { name?: string; systemPrompt?: string }
+  ): Promise<boolean> {
+    const body: Record<string, string> = {};
+    if (updates.name !== undefined) body.name = updates.name;
+    if (updates.systemPrompt !== undefined) body.system_prompt = updates.systemPrompt;
+    const res = await fetch(`/api/agents/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) return false;
+    const raw: RawAgent = await res.json();
+    const agent = mapAgent(raw);
+    setAgents((prev) => prev.map((a) => (a.id === id ? agent : a)));
+    return true;
+  }
+
   async function deleteAgent(id: string) {
     await fetch(`/api/agents/${id}`, { method: "DELETE" });
     setAgents((prev) => prev.filter((a) => a.id !== id));
@@ -86,6 +105,6 @@ export function useCompanyData() {
 
   return {
     departments, agents, loading, error,
-    addDepartment, deleteDepartment, addAgent, deleteAgent, reload: load,
+    addDepartment, deleteDepartment, addAgent, updateAgent, deleteAgent, reload: load,
   };
 }

@@ -10,7 +10,9 @@ import {
   MenuIcon,
   RefreshCwIcon,
   XIcon,
+  Trash2Icon,
 } from "lucide-react";
+import Markdown from "react-markdown";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useApiKey } from "@/lib/useApiKey";
@@ -21,6 +23,10 @@ import { useAgentStatus } from "@/lib/agentStatus/context";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { toast } from "sonner";
 import { parseErrorCode, friendlyMessage } from "@/lib/friendlyError";
+import type { CodeArtifact } from "@/lib/codeArtifact";
+import { extractArtifacts } from "@/lib/codeArtifact";
+import CodeBlockToolbar from "./CodeBlockToolbar";
+import CodePreviewPanel from "./CodePreviewPanel";
 
 type Message = {
   role: "user" | "assistant";
@@ -89,6 +95,45 @@ function AgentList({
   );
 }
 
+/** Renders markdown with code block toolbars (Preview/Download/Copy/GitHub). */
+function MarkdownWithArtifacts({
+  content,
+  onPreview,
+}: {
+  content: string;
+  onPreview: (artifact: CodeArtifact) => void;
+}) {
+  const artifacts = extractArtifacts(content);
+  let artifactIdx = 0;
+
+  return (
+    <Markdown
+      components={{
+        pre({ children, ...props }) {
+          // Match this pre to the next artifact by index
+          const artifact = artifacts[artifactIdx];
+          if (artifact) artifactIdx++;
+
+          return (
+            <div className="my-2">
+              <pre {...props} className="rounded-lg bg-[#1e1e1e] text-[#d4d4d4] p-3 overflow-x-auto text-xs leading-relaxed">
+                {children}
+              </pre>
+              {artifact && (
+                <div className="mt-1.5">
+                  <CodeBlockToolbar artifact={artifact} onPreview={onPreview} />
+                </div>
+              )}
+            </div>
+          );
+        },
+      }}
+    >
+      {content}
+    </Markdown>
+  );
+}
+
 export default function WorkspaceChat() {
   const searchParams = useSearchParams();
   const { apiKey } = useApiKey();
@@ -100,12 +145,27 @@ export default function WorkspaceChat() {
 
   const initialAgentId = searchParams.get("agent") ?? "";
   const [selectedAgentId, setSelectedAgentId] = useState(initialAgentId);
-  const [messages, setMessages] = useState<Message[]>([]);
+  const [messages, setMessages] = useState<Message[]>(() => {
+    if (typeof window === "undefined" || !initialAgentId) return [];
+    try {
+      const saved = localStorage.getItem(`chat_${initialAgentId}`);
+      return saved ? JSON.parse(saved) : [];
+    } catch { return []; }
+  });
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [previewArtifact, setPreviewArtifact] = useState<CodeArtifact | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const pendingMessageRef = useRef<string>("");
+
+  // Persist chat history to localStorage
+  useEffect(() => {
+    if (!selectedAgentId || messages.length === 0) return;
+    try {
+      localStorage.setItem(`chat_${selectedAgentId}`, JSON.stringify(messages.slice(-100)));
+    } catch { /* quota exceeded — ignore */ }
+  }, [messages, selectedAgentId]);
 
   const selectedAgent: Agent | null =
     agents.find((a) => a.id === selectedAgentId) ?? null;
@@ -142,10 +202,24 @@ export default function WorkspaceChat() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedAgent]);
 
+  // Escape key closes mobile drawer
+  useEffect(() => {
+    if (!drawerOpen) return;
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") setDrawerOpen(false);
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [drawerOpen]);
+
   // Close drawer when clicking backdrop or after selecting on mobile
   function handleSelectAgent(id: string) {
     setSelectedAgentId(id);
-    setMessages([]);
+    // Load saved chat history for this agent
+    try {
+      const saved = localStorage.getItem(`chat_${id}`);
+      setMessages(saved ? JSON.parse(saved) : []);
+    } catch { setMessages([]); }
     setDrawerOpen(false);
   }
 
@@ -158,9 +232,7 @@ export default function WorkspaceChat() {
       pendingMessageRef.current = input.trim();
       window.dispatchEvent(new CustomEvent("open-api-key-modal", {
         detail: {
-          interceptMessage: lang === "ko"
-            ? `${selectedAgent.name}와(과) 대화하려면 Anthropic API 키가 필요합니다. 아래에서 설정해 주세요.`
-            : `To chat with ${selectedAgent.name}, an Anthropic API key is required. Set it up below.`,
+          interceptMessage: t.workspace.interceptNoKey(selectedAgent.name),
         },
       }));
       return;
@@ -228,10 +300,7 @@ export default function WorkspaceChat() {
         }
 
         setAgentStatus(agentId, "idle", text.slice(0, 60));
-        toast.success(
-          lang === "ko" ? `${agentName}이(가) 작업을 완료했습니다.` : `${agentName} finished a task.`,
-          { duration: 4000 }
-        );
+        toast.success(t.workspace.taskDone(agentName), { duration: 4000 });
       }
     } catch (err) {
       const errStr = err instanceof Error ? err.message : String(err);
@@ -320,16 +389,28 @@ export default function WorkspaceChat() {
           </button>
 
           {selectedAgent ? (
-            <div className="flex items-center gap-2 min-w-0">
+            <div className="flex items-center gap-2 min-w-0 flex-1">
               <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-bold text-primary">
                 {selectedAgent.name.slice(0, 2).toUpperCase()}
               </span>
-              <div className="min-w-0">
+              <div className="min-w-0 flex-1">
                 <p className="font-semibold text-sm truncate">{selectedAgent.name}</p>
                 <p className="text-xs text-muted-foreground truncate">
                   {deptName(selectedAgent.departmentId)}
                 </p>
               </div>
+              {messages.length > 0 && (
+                <button
+                  onClick={() => {
+                    setMessages([]);
+                    try { localStorage.removeItem(`chat_${selectedAgentId}`); } catch {}
+                  }}
+                  className="shrink-0 p-1.5 rounded-lg text-muted-foreground/50 hover:text-destructive hover:bg-destructive/10 transition-colors"
+                  title={t.workspace.clearChat}
+                >
+                  <Trash2Icon className="size-3.5" />
+                </button>
+              )}
             </div>
           ) : (
             <button
@@ -363,7 +444,7 @@ export default function WorkspaceChat() {
             </div>
           )}
           {selectedAgent && messages.length === 0 && (
-            <div className="flex flex-1 flex-col items-center justify-center h-full gap-2 text-center px-6">
+            <div className="flex flex-1 flex-col items-center justify-center h-full gap-3 text-center px-6">
               <span className="flex size-12 items-center justify-center rounded-2xl bg-primary/10 text-2xl font-bold text-primary">
                 {selectedAgent.name.slice(0, 2).toUpperCase()}
               </span>
@@ -371,6 +452,13 @@ export default function WorkspaceChat() {
               <p className="text-muted-foreground text-sm">
                 {deptName(selectedAgent.departmentId)} · {t.workspace.readyToHelp}
               </p>
+              {selectedAgent.systemPrompt && (
+                <p className="text-xs text-muted-foreground/70 max-w-sm leading-relaxed mt-1 italic">
+                  &ldquo;{selectedAgent.systemPrompt.length > 150
+                    ? selectedAgent.systemPrompt.slice(0, 150) + "…"
+                    : selectedAgent.systemPrompt}&rdquo;
+                </p>
+              )}
             </div>
           )}
           {messages.map((msg, i) => (
@@ -384,13 +472,22 @@ export default function WorkspaceChat() {
                 </span>
               )}
               <div
-                className={`max-w-[85%] md:max-w-[70%] rounded-2xl px-4 py-3 text-sm leading-relaxed whitespace-pre-wrap ${
+                className={`max-w-[85%] md:max-w-[70%] rounded-2xl px-4 py-3 text-sm leading-relaxed ${
                   msg.role === "user"
-                    ? "bg-primary text-primary-foreground rounded-br-sm"
-                    : "bg-muted text-foreground rounded-bl-sm"
+                    ? "bg-primary text-primary-foreground rounded-br-sm whitespace-pre-wrap"
+                    : "bg-muted text-foreground rounded-bl-sm prose prose-sm prose-neutral dark:prose-invert max-w-none [&>*:first-child]:mt-0 [&>*:last-child]:mb-0"
                 }`}
               >
-                {msg.content || (
+                {msg.content ? (
+                  msg.role === "assistant" ? (
+                    <MarkdownWithArtifacts
+                      content={msg.content}
+                      onPreview={setPreviewArtifact}
+                    />
+                  ) : (
+                    msg.content
+                  )
+                ) : (
                   <span className="italic text-muted-foreground">
                     {selectedAgent?.name} {t.workspace.thinking}
                   </span>
@@ -428,12 +525,18 @@ export default function WorkspaceChat() {
                   ? t.workspace.placeholderNoKey
                   : t.workspace.messagePlaceholder(selectedAgent.name)
               }
-              rows={2}
+              rows={1}
               value={input}
-              onChange={(e) => setInput(e.target.value)}
+              onChange={(e) => {
+                setInput(e.target.value);
+                const el = e.currentTarget;
+                el.style.height = "auto";
+                el.style.height = `${Math.min(el.scrollHeight, 144)}px`;
+              }}
               onKeyDown={handleKeyDown}
               disabled={!selectedAgent || loading || !isReady}
-              className="resize-none min-h-[48px] max-h-36 text-base md:text-sm"
+              className="resize-none min-h-[44px] max-h-36 text-base md:text-sm"
+              style={{ overflow: "hidden" }}
             />
             <Button
               type="submit"
@@ -449,6 +552,14 @@ export default function WorkspaceChat() {
           </p>
         </div>
       </div>
+
+      {/* ── Code Preview Panel (mobile: fullscreen overlay, desktop: inline right pane) ── */}
+      {previewArtifact && (
+        <CodePreviewPanel
+          artifact={previewArtifact}
+          onClose={() => setPreviewArtifact(null)}
+        />
+      )}
     </div>
   );
 }

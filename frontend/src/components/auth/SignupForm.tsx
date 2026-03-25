@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { GlobeIcon } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,7 +11,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { useT } from "@/lib/i18n/context";
 
 export default function SignupForm() {
-  const { t, lang } = useT();
+  const { t, lang, setLang } = useT();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -39,20 +40,12 @@ export default function SignupForm() {
     return (
       <Card className="w-full max-w-sm text-center">
         <CardHeader>
-          <CardTitle>
-            {lang === "ko" ? "이메일을 확인하세요" : "Check your email"}
-          </CardTitle>
-          <CardDescription>
-            {lang === "ko" ? (
-              <><strong>{email}</strong>로 확인 링크를 보냈습니다. 클릭하면 계정이 활성화됩니다.</>
-            ) : (
-              <>We sent a confirmation link to <strong>{email}</strong>. Click it to activate your account.</>
-            )}
-          </CardDescription>
+          <CardTitle>{t.auth.checkEmail}</CardTitle>
+          <CardDescription>{t.auth.checkEmailDesc(email)}</CardDescription>
         </CardHeader>
         <CardFooter className="justify-center">
           <Link href="/login" className="text-sm underline underline-offset-4">
-            {lang === "ko" ? "로그인으로 돌아가기" : "Back to sign in"}
+            {t.auth.backToSignIn}
           </Link>
         </CardFooter>
       </Card>
@@ -104,6 +97,24 @@ export default function SignupForm() {
           </p>
         </CardFooter>
       </form>
+      <div className="flex justify-center pt-3 pb-1">
+        <div className="flex items-center gap-0.5 rounded-lg border bg-muted/50 p-0.5">
+          <GlobeIcon className="size-3.5 text-muted-foreground ml-1.5 shrink-0" />
+          {(["en", "ko"] as const).map((code) => (
+            <button
+              key={code}
+              onClick={() => setLang(code)}
+              className={`rounded-md px-2 py-1 text-xs font-medium transition-colors ${
+                lang === code
+                  ? "bg-background text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              {code === "en" ? "EN" : "한국어"}
+            </button>
+          ))}
+        </div>
+      </div>
     </Card>
   );
 }

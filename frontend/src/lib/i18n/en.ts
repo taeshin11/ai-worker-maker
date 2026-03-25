@@ -49,6 +49,18 @@ export type Dict = {
     employees: (n: number) => string;
     chatWith: (name: string) => string;
     rolePlaceholder: (dept: string) => string;
+    visionView: string;
+    visionDefine: string;
+    visionDefineDesc: string;
+    visionApproved: string;
+    visionDraft: string;
+    visionStart: string;
+    deleteDept: string;
+    deleteDeptConfirm: (name: string) => string;
+    deleteAgentConfirm: (name: string) => string;
+    editRole: string;
+    editRolePlaceholder: string;
+    save: string;
   };
   workspace: {
     agents: string;
@@ -65,6 +77,17 @@ export type Dict = {
     placeholderNoAgent: string;
     placeholderNoKey: string;
     messagePlaceholder: (name: string) => string;
+    clearChat: string;
+    taskDone: (name: string) => string;
+    interceptNoKey: (name: string) => string;
+    preview: string;
+    closePreview: string;
+    downloadFile: string;
+    saveToGithub: string;
+    githubComingSoon: string;
+    copyCode: string;
+    codeCopied: string;
+    codePreview: string;
   };
   onboard: {
     pageTitle: string;
@@ -118,6 +141,9 @@ export type Dict = {
     fullName: string;
     alreadyHave: string;
     creatingAccount: string;
+    checkEmail: string;
+    checkEmailDesc: (email: string) => string;
+    backToSignIn: string;
   };
 };
 
@@ -181,6 +207,18 @@ export const en: Dict = {
     chatWith: (name) => `Chat with ${name}`,
     rolePlaceholder: (dept) =>
       `You are a specialist in ${dept.toLowerCase()}. You help with…`,
+    visionView: "View & edit your vision",
+    visionDefine: "Define Your Company Vision",
+    visionDefineDesc: "Chat with your Chief PM to shape your idea into a company",
+    visionApproved: "Approved",
+    visionDraft: "Draft",
+    visionStart: "Get started",
+    deleteDept: "Delete department",
+    deleteDeptConfirm: (name) => `Delete "${name}" and all its agents?`,
+    deleteAgentConfirm: (name) => `Delete "${name}"?`,
+    editRole: "Edit role",
+    editRolePlaceholder: "Describe this agent's role…",
+    save: "Save",
   },
 
   workspace: {
@@ -199,6 +237,18 @@ export const en: Dict = {
     placeholderNoAgent: "Choose an agent first…",
     placeholderNoKey: "Add your API key to chat…",
     messagePlaceholder: (name) => `Message ${name}…`,
+    clearChat: "Clear chat history",
+    taskDone: (name) => `${name} finished a task.`,
+    interceptNoKey: (name) =>
+      `To chat with ${name}, an Anthropic API key is required. Set it up below.`,
+    preview: "Preview",
+    closePreview: "Close preview",
+    downloadFile: "Download",
+    saveToGithub: "Save to GitHub",
+    githubComingSoon: "GitHub export coming soon!",
+    copyCode: "Copy code",
+    codeCopied: "Copied!",
+    codePreview: "Code Preview",
   },
 
   onboard: {
@@ -245,6 +295,10 @@ export const en: Dict = {
     fullName: "Full name",
     alreadyHave: "Already have an account?",
     creatingAccount: "Creating account…",
+    checkEmail: "Check your email",
+    checkEmailDesc: (email) =>
+      `We sent a confirmation link to ${email}. Click it to activate your account.`,
+    backToSignIn: "Back to sign in",
   },
 
   errors: {
