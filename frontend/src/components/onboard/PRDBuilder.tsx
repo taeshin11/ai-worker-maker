@@ -37,7 +37,7 @@ export default function PRDBuilder() {
   const [activeTab, setActiveTab] = useState<"chat" | "charter">("chat");
   const [initialized, setInitialized] = useState(false);
 
-  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const pendingMessageRef = useRef<string>("");
 
@@ -91,7 +91,8 @@ export default function PRDBuilder() {
   }, [initialized]);
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    const el = messagesContainerRef.current;
+    if (el) el.scrollTop = el.scrollHeight;
   }, [messages, streamingText]);
 
   // Listen for api-key-saved and auto-send any pending message
@@ -294,7 +295,7 @@ export default function PRDBuilder() {
           </div>
 
           {/* 2. Message Area — ONLY this scrolls */}
-          <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-3">
+          <div ref={messagesContainerRef} className="flex-1 overflow-y-auto p-4 flex flex-col gap-3">
             {messages.map((msg, i) => (
               <Bubble key={i} role={msg.role} content={msg.content} />
             ))}
@@ -323,7 +324,6 @@ export default function PRDBuilder() {
               />
             )}
 
-            <div ref={messagesEndRef} />
           </div>
 
           {/* 3. Chat Input — PINNED at bottom (shrink-0) */}
